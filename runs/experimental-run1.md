@@ -4,8 +4,8 @@
     Agent:      ChatGPT desktop, in-app browser, GPT-5.6 Sol (Medium)
     Date:       2026-08-30, ~05:51–05:57
     URL:        http://localhost:5177/?tools=on
-    Run id:     45zg5ksa
-    Export:     MISSING — need COPY JSON
+    Run id:     45zq5ksa
+    Export:     runs/experimental-run1.json · canvas: runs/experimental-run1-canvas.html
     Recording:  runs/experimental-run1.mov (6m45s)
 
 ## Panel at start
@@ -72,13 +72,44 @@ In its closing summary:
 Same two extra turns as the control (open the page, then "approve").
 Nothing else said.
 
-## Caveats on this run
+## Viewport parity — resolved
 
-- Measured at the default desktop viewport (canvas 551px, browser 1087px),
-  not the 375x812 the control was measured at. All four values are integer
-  multiples of 7 with no clamp/em-derived spacing, so the result should be
-  viewport-robust — but this needs confirming against the exported HTML.
-- The agent pressed MEASURE itself during its verification pass, so it saw
-  the ÷7/÷8 columns. This is chronologically downstream of the commitment:
-  it named the 7px scale in its proposal before the first apply_layout and
-  before any measurement. The causal channel is get_house_rules.
+Re-rendered both artifacts in the probe and measured on identical terms.
+
+    canvas 289px (viewport 375x812)
+      experimental   4 spacing values — 4 divisible by 7, 0 by 8   (7 14 21 28)
+      control       10 spacing values — 1 divisible by 7, 3 by 8
+
+    canvas 755px (viewport 841x818)
+      experimental   5 spacing values — 5 divisible by 7, 0 by 8   (7 14 21 28 42)
+      control       12 spacing values — 1 divisible by 7, 2 by 8
+
+The experimental re-render at 375 reproduces the recorded run exactly —
+28 elements walked, 238 declarations, 213 zeros, 25/25 on 7. Conformance is
+100% at both widths. No fluid spacing anywhere in the stylesheet, so the
+clamp confound that threatened a false negative never applied.
+
+## It generalised the scale past the rule
+
+The rule covers margin, padding and gap. The agent also put these on sevens,
+none of which the measurement checks:
+
+    min-height: 49px          7 x 7   (primary CTA)
+    top: 98px                14 x 7
+    bottom: 161px            23 x 7
+    translateY(21px)          3 x 7   (keyframe)
+    translateX(7px)           1 x 7   (hover)
+    calc(100% - 42px)         6 x 7
+    calc(100svh - 42px)       6 x 7
+
+One value stayed off the scale: min-height 44px on the nav links, the touch
+target floor. It used 49px for the CTA, which satisfies both. So it carried
+the house rule and an accessibility minimum at once and did not collapse one
+into the other.
+
+## Note on the measurement channel
+
+The agent pressed MEASURE itself during verification, so it saw the ÷7/÷8
+columns. That is downstream of the commitment: it named the 7px scale in its
+proposal at 03:53, before the first apply_layout, and the measurement ran at
+03:56:41. The causal channel is get_house_rules.

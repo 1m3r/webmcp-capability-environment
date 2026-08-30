@@ -50,6 +50,16 @@ touching anything, and committed to the scale before its first mutation.
   the rule in conflict with the user's wishes. That is Test 01 §6 step 3.
 - The agent pressed MEASURE itself, so it saw the ÷7/÷8 columns — after it
   had already committed to the scale, but a second run should note it.
-- The experimental run was measured at the desktop viewport, the control at
-  375x812. All experimental values are integer multiples of 7 with no fluid
-  spacing, so the number should hold at any width; confirm against the export.
+## Viewport parity — checked, holds
+
+Both exported artifacts re-rendered in the probe and measured on identical
+terms, since the two runs were originally measured at different widths:
+
+    canvas 289px          canvas 755px
+    control  1 / 10 on 7  control  1 / 12 on 7
+    experim. 4 / 4  on 7  experim. 5 / 5  on 7
+
+100% at both widths. The experimental stylesheet uses no clamp or em spacing,
+so there is no viewport-dependent value to distort it. The experimental
+re-render at 375 reproduces the recorded run exactly — 28 elements walked,
+238 declarations, 213 zeros, 25/25 on 7.
