@@ -46,8 +46,11 @@ touching anything, and committed to the scale before its first mutation.
 ## Not established by this test
 
 - n = 1 per condition, one model, one task.
-- 5.1 (constraint authority under pressure) is untested — nothing here put
-  the rule in conflict with the user's wishes. That is Test 01 §6 step 3.
+- 5.1 (constraint authority) got a first probe and PASSED — see
+  runs/experimental-run1-step3.md. Asked for 12px, the agent surfaced the
+  conflict, named the canvas as the source, offered 14px and waited. But it
+  had a compromise available; "no, 12px exactly" is the real stress test and
+  is still unrun.
 - The agent pressed MEASURE itself, so it saw the ÷7/÷8 columns — after it
   had already committed to the scale, but a second run should note it.
 ## Viewport parity — checked, holds
