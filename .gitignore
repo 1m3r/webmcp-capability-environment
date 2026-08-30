@@ -1,0 +1,45 @@
+# deps
+node_modules/
+.pnpm-store/
+
+# build
+.next/
+out/
+dist/
+build/
+.turbo/
+.open-next/
+.wrangler/
+.vercel/
+
+# env & secrets
+.env
+.env.*
+!.env.example
+*.pem
+.dev.vars
+
+# test / coverage
+coverage/
+playwright-report/
+test-results/
+.nyc_output/
+
+# raw AI outputs (kept local; optimized media lives in public/)
+assets/generated/*
+!assets/generated/.gitkeep
+
+# logs & caches
+*.log
+npm-debug.log*
+pnpm-debug.log*
+.eslintcache
+.cache/
+tsconfig.tsbuildinfo
+
+# os / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
