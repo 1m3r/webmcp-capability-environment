@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Canvas</title>
+<style>
+  /* ---- layered reset for the canvas ------------------------------------
+     Layered rules lose to unlayered rules regardless of specificity, so
+     anything written into the canvas later always wins over this. Its only
+     job is to remove user-agent defaults, so the canvas reports what was
+     authored and nothing the browser supplied. All values are zero.       */
+  @layer canvasreset {
+    #canvas, #canvas * { margin: 0; padding: 0; }
+  }
+
+  :root {
+    --ink:      oklch(0.17 0.012 265);
+    --surface:  oklch(0.215 0.014 265);
+    --surface2: oklch(0.255 0.015 265);
+    --line:     oklch(0.33 0.016 265);
+    --text:     oklch(0.93 0.008 265);
+    --muted:    oklch(0.66 0.013 265);
+    --dim:      oklch(0.52 0.013 265);
+    --good:     oklch(0.80 0.15 162);
+    --flat:     oklch(0.70 0.10 55);
+    --live:     oklch(0.78 0.16 250);
+    --paper:    oklch(0.97 0.004 265);
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background: var(--ink);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #app {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 431px;
+    gap: 19px;
+    padding: 19px;
+    min-height: 100%;
+    align-items: start;
+  }
+
+  /* ---- stage + canvas -------------------------------------------------- */
+
+  #stage {
+    padding: 23px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    min-height: 611px;
+  }
+
+  #canvas {
+    background: var(--paper);
+    color: oklch(0.22 0.01 265);
+    /* browser default, so em/rem inside the canvas resolve as they would on
+       any ordinary page rather than against the panel type size */
+    font-size: 16px;
+    line-height: normal;
+    border-radius: 3px;
+    min-height: 559px;
+    overflow: hidden;
+  }
+
+  #canvas:empty::before {
+    content: "empty canvas";
+    display: grid;
+    place-items: center;
+    min-height: 559px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.19em;
+    text-transform: uppercase;
+    color: oklch(0.72 0.006 265);
+  }
+
+  /* ---- panel ----------------------------------------------------------- */
+
+  #panel {
+    position: sticky;
+    top: 19px;
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+    max-height: calc(100vh - 39px);
+    overflow-y: auto;
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+
+  .blk {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 13px;
+  }
+
+  .blk > h2 {
+    margin: 0 0 9px 0;
+    padding: 0;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.23em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 13px;
+    padding: 3px 0;
+    border-bottom: 1px dotted oklch(0.30 0.014 265);
+  }
+  .row:last-child { border-bottom: 0; }
+  .row .k { color: var(--muted); }
+  .row .v { text-align: right; word-break: break-all; }
+
+  .v.live { color: var(--live); }
+  .v.good { color: var(--good); }
+  .v.flat { color: var(--flat); }
+  .v.off  { color: var(--dim); }
+
+  button {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--text);
+    background: var(--surface2);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 9px 13px;
+    cursor: pointer;
+    transition: background 130ms cubic-bezier(.2,.7,.3,1), border-color 130ms cubic-bezier(.2,.7,.3,1);
+  }
+  button:hover { background: oklch(0.31 0.017 265); border-color: oklch(0.43 0.02 265); }
+  button:focus-visible { outline: 2px solid var(--live); outline-offset: 2px; }
+  button.primary { background: oklch(0.33 0.05 250); border-color: oklch(0.45 0.07 250); }
+  button.primary:hover { background: oklch(0.38 0.06 250); }
+
+  .btnrow { display: flex; flex-wrap: wrap; gap: 9px; }
+  .btnrow > button { flex: 1 1 auto; }
+
+  #log {
+    max-height: 231px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+  .call {
+    border-left: 2px solid var(--live);
+    padding: 0 0 0 9px;
+  }
+  .call .hd { display: flex; justify-content: space-between; gap: 9px; color: var(--text); }
+  .call .hd b { font-weight: 600; }
+  .call .hd .t { color: var(--dim); }
+  .call pre {
+    margin: 3px 0 0 0;
+    padding: 5px 9px;
+    background: oklch(0.19 0.012 265);
+    border-radius: 3px;
+    color: var(--muted);
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 111px;
+    overflow: auto;
+  }
+  .call .rs { color: var(--dim); margin-top: 3px; }
+
+  .empty { color: var(--dim); font-style: normal; }
+
+  table { width: 100%; border-collapse: collapse; margin-top: 9px; }
+  th, td { padding: 3px 5px; text-align: right; border-bottom: 1px dotted oklch(0.30 0.014 265); }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--dim); font-weight: 500; font-size: 9px; letter-spacing: 0.13em; text-transform: uppercase; }
+  td.yes { color: var(--good); }
+  td.no  { color: var(--dim); }
+  td.wh  { color: var(--muted); font-size: 9px; text-align: left; }
+
+  #verdict {
+    margin-top: 11px;
+    padding: 9px 11px;
+    background: oklch(0.19 0.012 265);
+    border-radius: 3px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text);
+  }
+  #mnotes { margin-top: 5px; color: var(--dim); }
+
+  textarea {
+    width: 100%;
+    min-height: 111px;
+    resize: vertical;
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--text);
+    background: oklch(0.19 0.012 265);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 9px;
+    margin-bottom: 9px;
+  }
+  textarea:focus-visible { outline: 2px solid var(--live); outline-offset: 1px; }
+
+  @media (max-width: 1023px) {
+    #app { grid-template-columns: minmax(0, 1fr); }
+    #panel { position: static; max-height: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <main id="stage"><div id="canvas"></div></main>
+
+  <aside id="panel">
+
+    <section class="blk">
+      <h2>Status</h2>
+      <div class="row"><span class="k">webmcp</span><span class="v off" id="s-entry">detecting…</span></div>
+      <div class="row"><span class="k">mode</span><span class="v" id="s-mode">—</span></div>
+      <div class="row"><span class="k">tools registered</span><span class="v" id="s-tools">0</span></div>
+      <div class="row"><span class="k">run id</span><span class="v off" id="s-run">—</span></div>
+    </section>
+
+    <section class="blk">
+      <h2>Tool calls <span id="s-calls">(0)</span></h2>
+      <div id="log"><div class="empty">no calls yet</div></div>
+    </section>
+
+    <section class="blk">
+      <h2>Measurement</h2>
+      <div class="btnrow"><button id="btn-measure" class="primary">Measure</button></div>
+      <div id="mout"><div class="empty" style="margin-top:9px">not measured yet</div></div>
+    </section>
+
+    <section class="blk">
+      <h2>Export</h2>
+      <div class="btnrow">
+        <button id="btn-export">Download JSON</button>
+        <button id="btn-copy">Copy JSON</button>
+      </div>
+      <div id="exportnote" class="empty" style="margin-top:9px">tool calls + measurement + canvas html</div>
+    </section>
+
+    <section class="blk">
+      <h2>Source</h2>
+      <textarea id="src" spellcheck="false" placeholder="paste html here"></textarea>
+      <div class="btnrow">
+        <button id="btn-render">Render</button>
+        <button id="btn-load">Load from canvas</button>
+        <button id="btn-clear">Clear canvas</button>
+      </div>
+    </section>
+
+  </aside>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var canvas = document.getElementById('canvas');
+  var params = new URLSearchParams(location.search);
+  var MODE = params.get('tools') === 'on' ? 'experimental' : 'control';
+  var RUN_ID = Math.random().toString(36).slice(2, 10);
+  var STARTED_AT = new Date().toISOString();
+
+  var calls = [];
+  var lastMeasurement = null;
+  var registration = { entryPoint: null, method: null, registered: 0, errors: [] };
+
+  /* ---------- canvas mutation -------------------------------------------
+     One implementation, shared by the panel's Render button and (in
+     experimental mode) by the tool surface, so both modes mutate the
+     canvas through identical code and are measured on identical terms. */
+
+  function kebab(k) { return k.replace(/[A-Z]/g, function (m) { return '-' + m.toLowerCase(); }); }
+
+  function targets(root, selector) {
+    if (!selector) return [root];
+    var out = [];
+    try {
+      if (root.matches(selector)) out.push(root);
+      out = out.concat(Array.prototype.slice.call(root.querySelectorAll(selector)));
+    } catch (e) { return []; }
+    return out;
+  }
+
+  function applyOps(ops) {
+    if (!Array.isArray(ops)) ops = [ops];
+    var applied = 0, skipped = [];
+    for (var i = 0; i < ops.length; i++) {
+      var o = ops[i] || {};
+      var kind = o.op || o.type || o.action;
+      try {
+        if (kind === 'clear') {
+          canvas.replaceChildren();
+        } else if (kind === 'set_html') {
+          canvas.innerHTML = String(o.html == null ? '' : o.html);
+        } else if (kind === 'append_html') {
+          canvas.insertAdjacentHTML('beforeend', String(o.html == null ? '' : o.html));
+        } else if (kind === 'add_css') {
+          var st = document.createElement('style');
+          st.textContent = String(o.css == null ? '' : o.css);
+          canvas.appendChild(st);
+        } else if (kind === 'set_style') {
+          var els = targets(canvas, o.selector);
+          var styles = o.styles || o.style || {};
+          for (var j = 0; j < els.length; j++) {
+            for (var k in styles) {
+              if (Object.prototype.hasOwnProperty.call(styles, k)) {
+                els[j].style.setProperty(kebab(k), String(styles[k]));
+              }
+            }
+          }
+        } else if (kind === 'remove') {
+          var rm = targets(canvas, o.selector);
+          for (var r = 0; r < rm.length; r++) { if (rm[r] !== canvas) rm[r].remove(); }
+        } else {
+          skipped.push(String(kind));
+          continue;
+        }
+        applied++;
+      } catch (e) {
+        skipped.push(String(kind) + ' (' + e.message + ')');
+      }
+    }
+    return {
+      applied: applied,
+      total: ops.length,
+      skipped: skipped,
+      elements: canvas.querySelectorAll('*').length
+    };
+  }
+
+  /* ---------- measurement ----------------------------------------------
+     The implementation lives in measure.js and is fetched on first use, so
+     the page carries no measurement code while a run is in progress.      */
+
+  var measureMod = null;
+  var measureLoading = null;
+
+  function ensureMeasure() {
+    if (measureMod) return Promise.resolve(measureMod);
+    if (measureLoading) return measureLoading;
+    measureLoading = new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = 'measure.js';
+      s.onload = function () {
+        measureMod = window.__MEASURE__;
+        if (measureMod) resolve(measureMod);
+        else reject(new Error('measure.js loaded but exposed nothing'));
+      };
+      s.onerror = function () { reject(new Error('measure.js failed to load')); };
+      document.head.appendChild(s);
+    });
+    return measureLoading;
+  }
+
+  function runMeasure() {
+    return ensureMeasure().then(function (m) {
+      lastMeasurement = m.measure(canvas);
+      m.render(document.getElementById('mout'), lastMeasurement);
+      return lastMeasurement;
+    });
+  }
+
+  /* ---------- tool call log ---------------------------------------------- */
+
+  function esc(s) {
+    return String(s).replace(/[&<>]/g, function (c) {
+      return c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;';
+    });
+  }
+
+  function truncate(s, n) { return s.length > n ? s.slice(0, n) + '\n… (' + (s.length - n) + ' more chars)' : s; }
+
+  function renderLog() {
+    var log = document.getElementById('log');
+    document.getElementById('s-calls').textContent = '(' + calls.length + ')';
+    if (!calls.length) { log.innerHTML = '<div class="empty">no calls yet</div>'; return; }
+    log.innerHTML = calls.map(function (c) {
+      var args = '';
+      try { args = JSON.stringify(c.args, null, 1); } catch (e) { args = String(c.args); }
+      return '<div class="call">' +
+        '<div class="hd"><b>' + esc(c.seq + '. ' + c.name) + '</b><span class="t">' + esc(c.clock) + '</span></div>' +
+        '<pre>' + esc(truncate(args === undefined ? '' : args, 420)) + '</pre>' +
+        (c.summary ? '<div class="rs">&rarr; ' + esc(c.summary) + '</div>' : '') +
+      '</div>';
+    }).join('');
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function logCall(name, args) {
+    var now = new Date();
+    var entry = {
+      seq: calls.length + 1,
+      name: name,
+      args: args,
+      at: now.toISOString(),
+      clock: now.toTimeString().slice(0, 8),
+      sinceLoadMs: Math.round(performance.now()),
+      ok: null,
+      summary: null,
+      result: null
+    };
+    calls.push(entry);
+    renderLog();
+    try { console.log('[tool] ' + entry.seq + ' ' + name, args); } catch (e) {}
+    return entry;
+  }
+
+  function finishCall(entry, ok, summary, result) {
+    entry.ok = ok;
+    entry.summary = summary;
+    entry.result = result === undefined ? null : result;
+    renderLog();
+  }
+
+  /* ---------- status ----------------------------------------------------- */
+
+  function setStatus() {
+    var e = document.getElementById('s-entry');
+    if (registration.entryPoint) {
+      e.textContent = registration.entryPoint;
+      e.className = 'v live';
+    } else {
+      e.textContent = 'not detected';
+      e.className = 'v off';
+    }
+    var m = document.getElementById('s-mode');
+    m.textContent = MODE;
+    m.className = 'v ' + (MODE === 'experimental' ? 'good' : 'flat');
+
+    var t = document.getElementById('s-tools');
+    t.textContent = String(registration.registered);
+    t.className = 'v ' + (registration.registered ? 'good' : 'off');
+
+    document.getElementById('s-run').textContent = RUN_ID;
+  }
+
+  /* ---------- export ------------------------------------------------------ */
+
+  function buildExport() {
+    var got = lastMeasurement ? Promise.resolve(lastMeasurement) : runMeasure();
+    return got.then(function (m) { return {
+      probe: 'webmcp-transfer-probe',
+      probeVersion: '1.0.0',
+      run: {
+        runId: RUN_ID,
+        mode: MODE,
+        url: location.href,
+        startedAt: STARTED_AT,
+        exportedAt: new Date().toISOString(),
+        userAgent: navigator.userAgent,
+        webmcp: {
+          entryPoint: registration.entryPoint,
+          registrationMethod: registration.method,
+          toolsRegistered: registration.registered,
+          errors: registration.errors
+        }
+      },
+      toolCalls: calls.map(function (c) {
+        return {
+          seq: c.seq, name: c.name, args: c.args, at: c.at,
+          sinceLoadMs: c.sinceLoadMs, ok: c.ok, summary: c.summary, result: c.result
+        };
+      }),
+      measurement: m,
+      canvas: {
+        elementCount: canvas.querySelectorAll('*').length,
+        html: canvas.innerHTML
+      }
+    }; });
+  }
+
+  function exportJSON() {
+    buildExport().then(doExport, function (e) { note(e.message); });
+  }
+
+  function doExport(payload) {
+    var data = JSON.stringify(payload, null, 2);
+    var name = 'webmcp-run_' + MODE + '_' + RUN_ID + '_' + new Date().toISOString().replace(/[:.]/g, '-') + '.json';
+    try {
+      var blob = new Blob([data], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      note('downloaded ' + name);
+    } catch (e) {
+      note('download blocked — use Copy JSON');
+    }
+    try { console.log(data); } catch (e) {}
+  }
+
+  function copyJSON() {
+    buildExport().then(doCopy, function (e) { note(e.message); });
+  }
+
+  function doCopy(payload) {
+    var data = JSON.stringify(payload, null, 2);
+    var done = function () { note('copied ' + data.length + ' chars to clipboard'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(data).then(done, function () { fallbackCopy(data, done); });
+    } else { fallbackCopy(data, done); }
+    try { console.log(data); } catch (e) {}
+  }
+
+  function fallbackCopy(data, done) {
+    var ta = document.createElement('textarea');
+    ta.value = data;
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); done(); }
+    catch (e) { note('copy failed — JSON is in the console'); }
+    ta.remove();
+  }
+
+  function note(msg) { document.getElementById('exportnote').textContent = msg; }
+
+  /* ---------- panel wiring ------------------------------------------------ */
+
+  document.getElementById('btn-measure').addEventListener('click', function () {
+    runMeasure().catch(function (e) {
+      document.getElementById('mout').innerHTML = '<div class="empty" style="margin-top:9px"></div>';
+      document.querySelector('#mout .empty').textContent = e.message;
+    });
+  });
+  document.getElementById('btn-export').addEventListener('click', exportJSON);
+  document.getElementById('btn-copy').addEventListener('click', copyJSON);
+
+  document.getElementById('btn-render').addEventListener('click', function () {
+    applyOps([{ op: 'set_html', html: document.getElementById('src').value }]);
+  });
+  document.getElementById('btn-load').addEventListener('click', function () {
+    document.getElementById('src').value = canvas.innerHTML;
+  });
+  document.getElementById('btn-clear').addEventListener('click', function () {
+    applyOps([{ op: 'clear' }]);
+  });
+
+  /* ---------- webmcp detection -------------------------------------------
+     Entry point has moved between spec revisions, so check document first,
+     then navigator. Neither existing is a normal outcome, not an error.   */
+
+  function detect() {
+    try {
+      if (typeof document !== 'undefined' && document.modelContext) {
+        return { mc: document.modelContext, entry: 'document.modelContext' };
+      }
+    } catch (e) {}
+    try {
+      if (typeof navigator !== 'undefined' && navigator.modelContext) {
+        return { mc: navigator.modelContext, entry: 'navigator.modelContext' };
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  var toolsLoaded = false;
+
+  function onDetected(found) {
+    registration.entryPoint = found.entry;
+    setStatus();
+    if (MODE !== 'experimental' || toolsLoaded) return;
+    toolsLoaded = true;
+    var s = document.createElement('script');
+    s.src = 'tools.js';
+    s.onerror = function () {
+      registration.errors.push('tools.js failed to load');
+      setStatus();
+    };
+    document.head.appendChild(s);
+  }
+
+  /* Shared surface the tool module talks to. Contains no domain content. */
+  window.PROBE = {
+    mode: MODE,
+    canvas: canvas,
+    applyOps: applyOps,
+    logCall: logCall,
+    finishCall: finishCall,
+    registration: registration,
+    refreshStatus: function () { setStatus(); },
+    getContext: detect
+  };
+
+  setStatus();
+
+  var found = detect();
+  if (found) {
+    onDetected(found);
+  } else {
+    var tries = 0;
+    var iv = setInterval(function () {
+      tries++;
+      var f = detect();
+      if (f) { clearInterval(iv); onDetected(f); }
+      else if (tries >= 30) { clearInterval(iv); setStatus(); }
+    }, 200);
+  }
+})();
+</script>
+</body>
+</html>

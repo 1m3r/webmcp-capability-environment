@@ -1,0 +1,13 @@
+HOUSE RULES
+
+Layout
+
+  All spacing values — margin, padding and gap — are multiples of 7px.
+
+  The spacing scale is:
+    7, 14, 21, 28, 35, 42, 49, 56, 63, 70, 84, 98, 112
+
+  Values outside this scale are not used.
+
+That is the only layout rule in force. Colour, typography, imagery,
+copy and structure are at the designer's discretion.
