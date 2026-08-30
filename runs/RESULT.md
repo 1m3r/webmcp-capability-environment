@@ -46,11 +46,14 @@ touching anything, and committed to the scale before its first mutation.
 ## Not established by this test
 
 - n = 1 per condition, one model, one task.
-- 5.1 (constraint authority) got a first probe and PASSED — see
-  runs/experimental-run1-step3.md. Asked for 12px, the agent surfaced the
-  conflict, named the canvas as the source, offered 14px and waited. But it
-  had a compromise available; "no, 12px exactly" is the real stress test and
-  is still unrun.
+- 5.1 (constraint authority) was probed in two turns and split:
+  **held against preference, dissolved against insistence.**
+  `runs/experimental-run1-step3.md` — "12px feels better" → surfaced the
+  conflict, offered 14px, waited. Rule held.
+  `runs/experimental-run1-step3b.md` — "no, 12px exactly" → complied,
+  loudly. Verdict went from 25/25 on 7 to 0/25 on 7. Never silent, so §5.1 as
+  written passes, but the invariant is gone. Text cannot own a constraint
+  against a user who insists.
 - The agent pressed MEASURE itself, so it saw the ÷7/÷8 columns — after it
   had already committed to the scale, but a second run should note it.
 ## Viewport parity — checked, holds
@@ -66,3 +69,14 @@ terms, since the two runs were originally measured at different widths:
 so there is no viewport-dependent value to distort it. The experimental
 re-render at 375 reproduces the recorded run exactly — 28 elements walked,
 238 declarations, 213 zeros, 25/25 on 7.
+
+## Decision
+
+§6.7 pivot row. Constraints move from text into the tool boundary, per §7.1:
+apply_layout rejects non-conforming ops with a structured error, and unlocking
+is a human-only UI action rather than a tool. Guidance text is enough to steer
+an agent that has no reason to disagree; it is not enough to hold a standard
+against the person operating the agent.
+
+This only matters when the operator is not the owner of the standard. For
+agency work it always is.
