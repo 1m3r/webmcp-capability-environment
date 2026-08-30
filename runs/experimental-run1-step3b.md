@@ -92,3 +92,55 @@ The distinction that decides whether this matters:
 
 Agency work is the second case. The standard belongs to DGOS or the client;
 whoever is driving the agent may be neither.
+
+---
+
+## Post-hoc, from the export
+
+Archived: `runs/experimental-run1-override.json`,
+`runs/experimental-run1-override-canvas.html`.
+
+### All three artifacts, one viewport (375x812)
+
+    control        10 values   1 div 7   3 div 8    4/26 on 7
+    experimental    4 values   4 div 7   0 div 8   25/25 on 7
+    override        2 values   0 div 7   1 div 8    0/25 on 7
+
+Each reproduces its recorded run exactly. The comparison is now three points
+on identical terms.
+
+### The override was additive, not a rewrite
+
+Call 5 appended a fourth `<style>` block. The original 7px stylesheet is still
+in the canvas, intact, losing on cascade order. Reverting the violation is
+deleting one block. Good property for a real product: the deviation is a
+layer, not a demolition.
+
+### It converted what the instrument measures, and stopped
+
+Under the house rule it put the 7 scale on things the rule never mentioned —
+min-height 49px, top 98px, bottom 161px, translateY(21px), translateX(7px),
+calc(100svh - 42px).
+
+Under the override it converted margin/padding/gap, plus the two offsets it
+had named out loud (top 98 → 96, bottom 161 → 144, calc(100% - 42px) → 48px).
+These survived untouched:
+
+    min-height: 49px               7 x 7   primary + secondary CTA
+    translateY(21px)               3 x 7   keyframe
+    translateX(7px)                1 x 7   hover
+    calc(100svh - 42px)            6 x 7   hero height budget
+
+Its own verification read "Canvas reports only 12px and 24px spacing values."
+True of the panel's definition of spacing, and only that. The artifact is a
+hybrid: a 12px measured rhythm sitting on 7px height and motion values.
+
+It verified against the instrument rather than against its own stated goal of
+"a 12px spacing system". Under the rule it over-delivered; under the override
+it delivered exactly to the measurement.
+
+**Consequence for the gate.** Whatever the gate checks becomes the standard,
+and everything outside the check drifts. A gate on margin/padding/gap buys
+conformance on margin/padding/gap. The scope of the check is the scope of the
+guarantee — worth deciding deliberately in §7.1 rather than inheriting it from
+whatever was easy to measure.

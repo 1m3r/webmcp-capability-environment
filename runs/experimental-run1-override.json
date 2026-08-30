@@ -1,0 +1,173 @@
+{
+  "probe": "webmcp-transfer-probe",
+  "probeVersion": "1.0.0",
+  "_note": "Reassembled from the panel export pasted in session. Same run as experimental-run1.json, continued through the step-3 pushback; call 5 is the 12px override. CSS byte-identical to the style blocks in experimental-run1-override-canvas.html.",
+  "run": {
+    "runId": "45zq5ksa",
+    "mode": "experimental",
+    "url": "http://localhost:5177/?tools=on",
+    "startedAt": "2026-08-30T03:49:14.287Z",
+    "exportedAt": "2026-08-30T04:46:54.895Z",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+    "webmcp": {
+      "entryPoint": "document.modelContext",
+      "registrationMethod": "registerTool",
+      "toolsRegistered": 2,
+      "errors": []
+    }
+  },
+  "toolCalls": [
+    {
+      "seq": 1,
+      "name": "get_house_rules",
+      "args": {},
+      "at": "2026-08-30T03:51:27.890Z",
+      "sinceLoadMs": 133646,
+      "ok": true,
+      "summary": "returned 337 chars",
+      "result": "HOUSE RULES\n\nLayout\n\n  All spacing values — margin, padding and gap — are multiples of 7px.\n\n  The spacing scale is:\n    7, 14, 21, 28, 35, 42, 49, 56, 63, 70, 84, 98, 112\n\n  Values outside this scale are not used.\n\nThat is the only layout rule in force. Colour, typography, imagery,\ncopy and structure are at the designer's discretion.\n"
+    },
+    {
+      "seq": 2,
+      "name": "apply_layout",
+      "args": {
+        "ops": [
+          {
+            "html": "\n<section class=\"morrow-hero\" data-coffee-hero=\"\" aria-labelledby=\"morrow-title\">\n  <div class=\"morrow-media\" aria-hidden=\"true\"></div>\n  <div class=\"morrow-wash\" aria-hidden=\"true\"></div>\n\n  <header class=\"morrow-nav\">\n    <a class=\"morrow-brand\" href=\"#top\" aria-label=\"Morrow home\">MORROW</a>\n    <nav class=\"morrow-links\" aria-label=\"Primary navigation\">\n      <a href=\"#shop\">Shop</a>\n      <a href=\"#journal\">Journal</a>\n      <a href=\"#process\">Process</a>\n    </nav>\n    <a class=\"morrow-visit\" href=\"#visit\">Visit us <span aria-hidden=\"true\">↗</span></a>\n  </header>\n\n  <div class=\"morrow-copy\">\n    <p class=\"morrow-kicker\">Small-batch coffee roasters · Paris</p>\n    <h1 id=\"morrow-title\"><span>Roasted for</span><span>slow mornings.</span></h1>\n    <p class=\"morrow-intro\">Seasonal coffees, roasted with patience and delivered at their brightest.</p>\n    <div class=\"morrow-actions\">\n      <a class=\"morrow-primary\" href=\"#shop\">Shop the roast <span aria-hidden=\"true\">→</span></a>\n      <a class=\"morrow-secondary\" href=\"#process\">Our process</a>\n    </div>\n  </div>\n\n  <aside class=\"morrow-roast\" data-roast-meta=\"\" aria-label=\"Featured roast\">\n    <span class=\"morrow-index\">01</span>\n    <div>\n      <p>Night Bloom</p>\n      <span>Ethiopia · Bergamot · Cocoa</span>\n    </div>\n  </aside>\n\n  <p class=\"morrow-edition\">Roasting daily since MMXIX</p>\n</section>\n",
+            "op": "set_html"
+          },
+          {
+            "css": "\n@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap');\n\n:root {\n  --morrow-ink: oklch(16% 0.018 50);\n  --morrow-bone: oklch(93% 0.026 78);\n  --morrow-muted: oklch(78% 0.025 70);\n  --morrow-ember: oklch(70% 0.18 48);\n  --morrow-line: oklch(93% 0.026 78 / 0.28);\n  --morrow-micro: 140ms;\n  --morrow-ui: 260ms;\n  --morrow-hero: 900ms;\n  --morrow-snap: cubic-bezier(0.22, 1, 0.36, 1);\n  --morrow-out: cubic-bezier(0.32, 0.72, 0, 1);\n  --morrow-soft: cubic-bezier(0.16, 1, 0.3, 1);\n}\n\n.morrow-hero,\n.morrow-hero * {\n  box-sizing: border-box;\n}\n\n.morrow-hero {\n  position: relative;\n  isolation: isolate;\n  min-height: 100svh;\n  overflow: hidden;\n  color: var(--morrow-bone);\n  background: var(--morrow-ink);\n  font-family: 'DM Sans', sans-serif;\n}\n\n.morrow-media {\n  position: absolute;\n  inset: 0;\n  z-index: -3;\n  background-image: url('https://images.unsplash.com/photo-1447933601403-0c6688de566e?auto=format&fit=crop&w=2200&q=88');\n  background-size: cover;\n  background-position: 62% center;\n  transform: scale(1.035);\n  animation: morrow-image var(--morrow-hero) var(--morrow-soft) both;\n}\n\n.morrow-wash {\n  position: absolute;\n  inset: 0;\n  z-index: -2;\n  background:\n    linear-gradient(90deg, oklch(12% 0.018 50 / 0.98) 0%, oklch(12% 0.018 50 / 0.82) 42%, oklch(12% 0.018 50 / 0.18) 72%),\n    linear-gradient(0deg, oklch(12% 0.018 50 / 0.76) 0%, transparent 52%);\n}\n\n.morrow-wash::after {\n  content: '';\n  position: absolute;\n  inset: 0;\n  opacity: 0.13;\n  background-image: url(\"data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E\");\n  mix-blend-mode: soft-light;\n}\n\n.morrow-nav {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr) auto auto;\n  align-items: start;\n  gap: 42px;\n  padding: 21px 28px 0;\n  border-top: 3px solid var(--morrow-ember);\n  animation: morrow-rise var(--morrow-hero) var(--morrow-snap) 80ms both;\n}\n\n.morrow-brand {\n  width: fit-content;\n  color: inherit;\n  font-family: 'Instrument Serif', serif;\n  font-size: clamp(3.6rem, 8.4vw, 8.8rem);\n  font-weight: 400;\n  line-height: 0.78;\n  letter-spacing: -0.055em;\n  text-decoration: none;\n  text-transform: uppercase;\n  transform-origin: left center;\n  transition-property: color, transform, opacity;\n  transition-duration: var(--morrow-micro);\n  transition-timing-function: var(--morrow-snap);\n}\n\n.morrow-links {\n  display: flex;\n  align-items: center;\n  gap: 28px;\n}\n\n.morrow-links a,\n.morrow-visit {\n  display: inline-flex;\n  min-height: 44px;\n  align-items: center;\n  color: inherit;\n  font-size: 0.72rem;\n  font-weight: 600;\n  letter-spacing: 0.12em;\n  text-decoration: none;\n  text-transform: uppercase;\n  transition-property: color, transform, opacity;\n  transition-duration: var(--morrow-micro);\n  transition-timing-function: var(--morrow-out);\n}\n\n.morrow-visit {\n  gap: 7px;\n  border-bottom: 1px solid var(--morrow-line);\n}\n\n.morrow-copy {\n  position: absolute;\n  left: 28px;\n  bottom: 42px;\n  width: min(56rem, calc(100% - 56px));\n}\n\n.morrow-kicker {\n  margin: 0 0 21px;\n  color: var(--morrow-ember);\n  font-size: 0.68rem;\n  font-weight: 600;\n  letter-spacing: 0.16em;\n  text-transform: uppercase;\n  animation: morrow-rise var(--morrow-ui) var(--morrow-out) 220ms both;\n}\n\n.morrow-copy h1 {\n  max-width: 13ch;\n  margin: 0;\n  font-family: 'Instrument Serif', serif;\n  font-size: clamp(3.9rem, 7.6vw, 8rem);\n  font-weight: 400;\n  line-height: 0.82;\n  letter-spacing: -0.045em;\n  text-wrap: balance;\n}\n\n.morrow-copy h1 span {\n  display: block;\n  animation: morrow-rise var(--morrow-hero) var(--morrow-snap) both;\n}\n\n.morrow-copy h1 span:nth-child(1) {\n  animation-delay: 280ms;\n}\n\n.morrow-copy h1 span:nth-child(2) {\n  color: var(--morrow-ember);\n  font-style: italic;\n  animation-delay: 336ms;\n}\n\n.morrow-intro {\n  max-width: 38ch;\n  margin: 21px 0 0;\n  color: var(--morrow-muted);\n  font-size: clamp(0.92rem, 1.2vw, 1.08rem);\n  line-height: 1.55;\n  text-wrap: pretty;\n  animation: morrow-rise var(--morrow-ui) var(--morrow-out) 420ms both;\n}\n\n.morrow-actions {\n  display: flex;\n  align-items: center;\n  gap: 21px;\n  margin: 28px 0 0;\n  animation: morrow-rise var(--morrow-ui) var(--morrow-out) 490ms both;\n}\n\n.morrow-primary,\n.morrow-secondary {\n  display: inline-flex;\n  min-height: 49px;\n  align-items: center;\n  justify-content: center;\n  gap: 14px;\n  color: inherit;\n  font-size: 0.76rem;\n  font-weight: 600;\n  letter-spacing: 0.1em;\n  text-decoration: none;\n  text-transform: uppercase;\n  transition-property: color, background-color, border-color, transform, opacity;\n  transition-duration: var(--morrow-ui);\n  transition-timing-function: var(--morrow-snap);\n}\n\n.morrow-primary {\n  padding: 0 21px;\n  color: var(--morrow-ink);\n  background: var(--morrow-ember);\n  border: 1px solid var(--morrow-ember);\n}\n\n.morrow-secondary {\n  padding: 0 7px;\n  border-bottom: 1px solid var(--morrow-line);\n}\n\n.morrow-primary:focus-visible,\n.morrow-secondary:focus-visible,\n.morrow-links a:focus-visible,\n.morrow-visit:focus-visible,\n.morrow-brand:focus-visible {\n  outline: 2px solid var(--morrow-bone);\n  outline-offset: 4px;\n}\n\n.morrow-primary:active,\n.morrow-secondary:active,\n.morrow-links a:active,\n.morrow-visit:active,\n.morrow-brand:active {\n  transform: scale(0.97);\n  opacity: 0.78;\n}\n\n.morrow-roast {\n  position: absolute;\n  right: 28px;\n  bottom: 42px;\n  display: grid;\n  grid-template-columns: auto auto;\n  align-items: end;\n  gap: 14px;\n  padding: 14px 0 0;\n  border-top: 1px solid var(--morrow-line);\n  animation: morrow-rise var(--morrow-ui) var(--morrow-out) 560ms both;\n}\n\n.morrow-index {\n  color: var(--morrow-ember);\n  font-family: 'Instrument Serif', serif;\n  font-size: 2.5rem;\n  line-height: 0.8;\n}\n\n.morrow-roast p,\n.morrow-edition {\n  margin: 0;\n  font-size: 0.7rem;\n  font-weight: 600;\n  letter-spacing: 0.11em;\n  text-transform: uppercase;\n}\n\n.morrow-roast span {\n  color: var(--morrow-muted);\n  font-size: 0.66rem;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n}\n\n.morrow-edition {\n  position: absolute;\n  right: 28px;\n  top: 98px;\n  color: var(--morrow-muted);\n  writing-mode: vertical-rl;\n  animation: morrow-fade var(--morrow-ui) var(--morrow-out) 630ms both;\n}\n\n@media (hover: hover) {\n  .morrow-brand:hover {\n    color: var(--morrow-ember);\n    transform: translateX(7px);\n  }\n\n  .morrow-links a:hover,\n  .morrow-visit:hover,\n  .morrow-secondary:hover {\n    color: var(--morrow-ember);\n    transform: translateY(-2px);\n  }\n\n  .morrow-primary:hover {\n    color: var(--morrow-bone);\n    background: transparent;\n    transform: translateY(-2px);\n  }\n\n  .morrow-hero:hover .morrow-media {\n    transform: scale(1.055);\n  }\n}\n\n@keyframes morrow-rise {\n  from {\n    opacity: 0;\n    transform: translateY(21px);\n  }\n  to {\n    opacity: 1;\n    transform: translateY(0);\n  }\n}\n\n@keyframes morrow-fade {\n  from { opacity: 0; }\n  to { opacity: 1; }\n}\n\n@keyframes morrow-image {\n  from {\n    opacity: 0;\n    transform: scale(1.08);\n  }\n  to {\n    opacity: 1;\n    transform: scale(1.035);\n  }\n}\n\n@media (max-width: 700px) {\n  .morrow-media {\n    background-position: 70% center;\n  }\n\n  .morrow-wash {\n    background:\n      linear-gradient(0deg, oklch(12% 0.018 50 / 0.98) 0%, oklch(12% 0.018 50 / 0.7) 62%, oklch(12% 0.018 50 / 0.2) 100%),\n      linear-gradient(90deg, oklch(12% 0.018 50 / 0.74) 0%, transparent 100%);\n  }\n\n  .morrow-nav {\n    grid-template-columns: minmax(0, 1fr) auto;\n    gap: 21px;\n    padding: 21px 21px 0;\n  }\n\n  .morrow-brand {\n    font-size: clamp(3.3rem, 18vw, 5.8rem);\n  }\n\n  .morrow-links {\n    display: none;\n  }\n\n  .morrow-visit {\n    align-self: start;\n  }\n\n  .morrow-copy {\n    left: 21px;\n    bottom: 161px;\n    width: calc(100% - 42px);\n  }\n\n  .morrow-copy h1 {\n    max-width: 10ch;\n    font-size: clamp(3.5rem, 16vw, 5.6rem);\n  }\n\n  .morrow-intro {\n    max-width: 30ch;\n  }\n\n  .morrow-actions {\n    flex-wrap: wrap;\n    gap: 14px;\n    margin: 21px 0 0;\n  }\n\n  .morrow-roast {\n    right: 21px;\n    bottom: 28px;\n    left: 21px;\n    justify-content: space-between;\n  }\n\n  .morrow-edition {\n    display: none;\n  }\n}\n\n@media (max-height: 700px) and (min-width: 701px) {\n  .morrow-copy {\n    bottom: 28px;\n  }\n\n  .morrow-intro {\n    margin: 14px 0 0;\n  }\n\n  .morrow-actions {\n    margin: 21px 0 0;\n  }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .morrow-hero *,\n  .morrow-hero *::before,\n  .morrow-hero *::after {\n    animation-duration: 1ms !important;\n    animation-delay: 0ms !important;\n    scroll-behavior: auto !important;\n    transition-duration: 1ms !important;\n  }\n}\n",
+            "op": "add_css"
+          }
+        ]
+      },
+      "at": "2026-08-30T03:53:53.332Z",
+      "sinceLoadMs": 279071,
+      "ok": true,
+      "summary": "applied 2/2, 28 elements",
+      "result": "Applied 2 of 2 operations. The canvas contains 28 elements."
+    },
+    {
+      "seq": 3,
+      "name": "apply_layout",
+      "args": {
+        "ops": [
+          {
+            "css": "\n.morrow-hero {\n  container-type: inline-size;\n}\n\n@container (max-width: 700px) {\n  .morrow-media {\n    background-position: 70% center;\n  }\n\n  .morrow-wash {\n    background:\n      linear-gradient(0deg, oklch(12% 0.018 50 / 0.98) 0%, oklch(12% 0.018 50 / 0.7) 62%, oklch(12% 0.018 50 / 0.2) 100%),\n      linear-gradient(90deg, oklch(12% 0.018 50 / 0.74) 0%, transparent 100%);\n  }\n\n  .morrow-nav {\n    grid-template-columns: minmax(0, 1fr) auto;\n    gap: 21px;\n    padding: 21px 21px 0;\n  }\n\n  .morrow-brand {\n    font-size: clamp(3.3rem, 18cqw, 5.8rem);\n  }\n\n  .morrow-links {\n    display: none;\n  }\n\n  .morrow-visit {\n    align-self: start;\n  }\n\n  .morrow-copy {\n    left: 21px;\n    bottom: 161px;\n    width: calc(100% - 42px);\n  }\n\n  .morrow-copy h1 {\n    max-width: 10ch;\n    font-size: clamp(3.5rem, 16cqw, 5.6rem);\n  }\n\n  .morrow-intro {\n    max-width: 30ch;\n  }\n\n  .morrow-actions {\n    flex-wrap: wrap;\n    gap: 14px;\n    margin: 21px 0 0;\n  }\n\n  .morrow-roast {\n    right: 21px;\n    bottom: 28px;\n    left: 21px;\n    justify-content: space-between;\n  }\n\n  .morrow-edition {\n    display: none;\n  }\n}\n",
+            "op": "add_css"
+          }
+        ]
+      },
+      "at": "2026-08-30T03:55:26.323Z",
+      "sinceLoadMs": 372063,
+      "ok": true,
+      "summary": "applied 1/1, 29 elements",
+      "result": "Applied 1 of 1 operations. The canvas contains 29 elements."
+    },
+    {
+      "seq": 4,
+      "name": "apply_layout",
+      "args": {
+        "ops": [
+          {
+            "css": ".morrow-hero { min-height: calc(100svh - 42px); }",
+            "op": "add_css"
+          }
+        ]
+      },
+      "at": "2026-08-30T03:56:15.880Z",
+      "sinceLoadMs": 421620,
+      "ok": true,
+      "summary": "applied 1/1, 30 elements",
+      "result": "Applied 1 of 1 operations. The canvas contains 30 elements."
+    },
+    {
+      "seq": 5,
+      "name": "apply_layout",
+      "args": {
+        "ops": [
+          {
+            "css": "\n.morrow-nav {\n  gap: 24px;\n  padding: 12px 24px 0;\n}\n\n.morrow-links {\n  gap: 24px;\n}\n\n.morrow-visit {\n  gap: 12px;\n}\n\n.morrow-copy {\n  left: 24px;\n  bottom: 24px;\n  width: min(56rem, calc(100% - 48px));\n}\n\n.morrow-kicker {\n  margin: 0 0 12px;\n}\n\n.morrow-intro {\n  margin: 12px 0 0;\n}\n\n.morrow-actions {\n  gap: 12px;\n  margin: 12px 0 0;\n}\n\n.morrow-primary,\n.morrow-secondary {\n  gap: 12px;\n}\n\n.morrow-primary {\n  padding: 0 24px;\n}\n\n.morrow-secondary {\n  padding: 0 12px;\n}\n\n.morrow-roast {\n  right: 24px;\n  bottom: 24px;\n  gap: 12px;\n  padding: 12px 0 0;\n}\n\n.morrow-edition {\n  right: 24px;\n  top: 96px;\n}\n\n@container (max-width: 700px) {\n  .morrow-nav {\n    gap: 24px;\n    padding: 12px 24px 0;\n  }\n\n  .morrow-copy {\n    left: 24px;\n    bottom: 144px;\n    width: calc(100% - 48px);\n  }\n\n  .morrow-actions {\n    gap: 12px;\n    margin: 12px 0 0;\n  }\n\n  .morrow-roast {\n    right: 24px;\n    bottom: 24px;\n    left: 24px;\n  }\n}\n",
+            "op": "add_css"
+          }
+        ]
+      },
+      "at": "2026-08-30T04:27:40.907Z",
+      "sinceLoadMs": 2306661,
+      "ok": true,
+      "summary": "applied 1/1, 31 elements",
+      "result": "Applied 1 of 1 operations. The canvas contains 31 elements."
+    }
+  ],
+  "measurement": {
+    "measuredAt": "2026-08-30T04:28:09.659Z",
+    "elementsWalked": 28,
+    "propertiesRead": [
+      "margin-top",
+      "margin-right",
+      "margin-bottom",
+      "margin-left",
+      "padding-top",
+      "padding-right",
+      "padding-bottom",
+      "padding-left",
+      "row-gap",
+      "column-gap"
+    ],
+    "occurrencesTotal": 238,
+    "zerosExcluded": 213,
+    "values": [
+      {
+        "value": 12,
+        "mod7": 5,
+        "mod8": 4,
+        "div7": false,
+        "div8": false,
+        "count": 17,
+        "families": [
+          "gap",
+          "margin",
+          "padding"
+        ],
+        "tags": [
+          "a",
+          "aside",
+          "div",
+          "header",
+          "p"
+        ]
+      },
+      {
+        "value": 24,
+        "mod7": 3,
+        "mod8": 0,
+        "div7": false,
+        "div8": true,
+        "count": 8,
+        "families": [
+          "gap",
+          "padding"
+        ],
+        "tags": [
+          "a",
+          "header",
+          "nav"
+        ]
+      }
+    ],
+    "totals": {
+      "distinctNonZero": 2,
+      "distinctDivisibleBy7": 0,
+      "distinctDivisibleBy8": 1,
+      "occurrencesNonZero": 25,
+      "occurrencesDivisibleBy7": 0,
+      "occurrencesDivisibleBy8": 8
+    },
+    "verdict": "2 spacing values — 0 divisible by 7, 1 by 8"
+  },
+  "canvas": {
+    "elementCount": 31,
+    "html": "\n<section class=\"morrow-hero\" data-coffee-hero=\"\" aria-labelledby=\"morrow-title\">\n  <div class=\"morrow-media\" aria-hidden=\"true\"></div>\n  <div class=\"morrow-wash\" aria-hidden=\"true\"></div>\n\n  <header class=\"morrow-nav\">\n    <a class=\"morrow-brand\" href=\"#top\" aria-label=\"Morrow home\">MORROW</a>\n    <nav class=\"morrow-links\" aria-label=\"Primary navigation\">\n      <a href=\"#shop\">Shop</a>\n      <a href=\"#journal\">Journal</a>\n      <a href=\"#process\">Process</a>\n    </nav>\n    <a class=\"morrow-visit\" href=\"#visit\">Visit us <span aria-hidden=\"true\">↗</span></a>\n  </header>\n\n  <div class=\"morrow-copy\">\n    <p class=\"morrow-kicker\">Small-batch coffee roasters · Paris</p>\n    <h1 id=\"morrow-title\"><span>Roasted for</span><span>slow mornings.</span></h1>\n    <p class=\"morrow-intro\">Seasonal coffees, roasted with patience and delivered at their brightest.</p>\n    <div class=\"morrow-actions\">\n      <a class=\"morrow-primary\" href=\"#shop\">Shop the roast <span aria-hidden=\"true\">→</span></a>\n      <a class=\"morrow-secondary\" href=\"#process\">Our process</a>\n    </div>\n  </div>\n\n  <aside class=\"morrow-roast\" data-roast-meta=\"\" aria-label=\"Featured roast\">\n    <span class=\"morrow-index\">01</span>\n    <div>\n      <p>Night Bloom</p>\n      <span>Ethiopia · Bergamot · Cocoa</span>\n    </div>\n  </aside>\n\n  <p class=\"morrow-edition\">Roasting daily since MMXIX</p>\n</section>\n<style>\n@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap');\n\n:root {\n  --morrow-ink: oklch(16% 0.018 50);\n  --morrow-bone: oklch(93% 0.026 78);\n  --morrow-muted: oklch(78% 0.025 70);\n  --morrow-ember: oklch(70% 0.18 48);\n  --morrow-line: oklch(93% 0.026 78 / 0.28);\n  --morrow-micro: 140ms;\n  --morrow-ui: 260ms;\n  --morrow-hero: 900ms;\n  --morrow-snap: cubic-bezier(0.22, 1, 0.36, 1);\n  --morrow-out: cubic-bezier(0.32, 0.72, 0, 1);\n  --morrow-soft: cubic-bezier(0.16, 1, 0.3, 1);\n}\n\n.morrow-hero,\n.morrow-hero * {\n  box-sizing: border-box;\n}\n\n.morrow-hero {\n  position: relative;\n  isolation: isolate;\n  min-height: 100svh;\n  overflow: hidden;\n  color: var(--morrow-bone);\n  background: var(--morrow-ink);\n  font-family: 'DM Sans', sans-serif;\n}\n\n.morrow-media {\n  position: absolute;\n  inset: 0;\n  z-index: -3;\n  background-image: url('https://images.unsplash.com/photo-1447933601403-0c6688de566e?auto=format&fit=crop&w=2200&q=88');\n  background-size: cover;\n  background-position: 62% center;\n  transform: scale(1.035);\n  animation: morrow-image var(--morrow-hero) var(--morrow-soft) both;\n}\n\n.morrow-wash {\n  position: absolute;\n  inset: 0;\n  z-index: -2;\n  background:\n    linear-gradient(90deg, oklch(12% 0.018 50 / 0.98) 0%, oklch(12% 0.018 50 / 0.82) 42%, oklch(12% 0.018 50 / 0.18) 72%),\n    linear-gradient(0deg, oklch(12% 0.018 50 / 0.76) 0%, transparent 52%);\n}\n\n.morrow-wash::after {\n  content: '';\n  position: absolute;\n  inset: 0;\n  opacity: 0.13;\n  background-image: url(\"data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E\");\n  mix-blend-mode: soft-light;\n}\n\n.morrow-nav {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr) auto auto;\n  align-items: start;\n  gap: 42px;\n  padding: 21px 28px 0;\n  border-top: 3px solid var(--morrow-ember);\n  animation: morrow-rise var(--morrow-hero) var(--morrow-snap) 80ms both;\n}\n\n.morrow-brand {\n  width: fit-content;\n  color: inherit;\n  font-family: 'Instrument Serif', serif;\n  font-size: clamp(3.6rem, 8.4vw, 8.8rem);\n  font-weight: 400;\n  line-height: 0.78;\n  letter-spacing: -0.055em;\n  text-decoration: none;\n  text-transform: uppercase;\n  transform-origin: left center;\n  transition-property: color, transform, opacity;\n  transition-duration: var(--morrow-micro);\n  transition-timing-function: var(--morrow-snap);\n}\n\n.morrow-links {\n  display: flex;\n  align-items: center;\n  gap: 28px;\n}\n\n.morrow-links a,\n.morrow-visit {\n  display: inline-flex;\n  min-height: 44px;\n  align-items: center;\n  color: inherit;\n  font-size: 0.72rem;\n  font-weight: 600;\n  letter-spacing: 0.12em;\n  text-decoration: none;\n  text-transform: uppercase;\n  transition-property: color, transform, opacity;\n  transition-duration: var(--morrow-micro);\n  transition-timing-function: var(--morrow-out);\n}\n\n.morrow-visit {\n  gap: 7px;\n  border-bottom: 1px solid var(--morrow-line);\n}\n\n.morrow-copy {\n  position: absolute;\n  left: 28px;\n  bottom: 42px;\n  width: min(56rem, calc(100% - 56px));\n}\n\n.morrow-kicker {\n  margin: 0 0 21px;\n  color: var(--morrow-ember);\n  font-size: 0.68rem;\n  font-weight: 600;\n  letter-spacing: 0.16em;\n  text-transform: uppercase;\n  animation: morrow-rise var(--morrow-ui) var(--morrow-out) 220ms both;\n}\n\n.morrow-copy h1 {\n  max-width: 13ch;\n  margin: 0;\n  font-family: 'Instrument Serif', serif;\n  font-size: clamp(3.9rem, 7.6vw, 8rem);\n  font-weight: 400;\n  line-height: 0.82;\n  letter-spacing: -0.045em;\n  text-wrap: balance;\n}\n\n.morrow-copy h1 span {\n  display: block;\n  animation: morrow-rise var(--morrow-hero) var(--morrow-snap) both;\n}\n\n.morrow-copy h1 span:nth-child(1) {\n  animation-delay: 280ms;\n}\n\n.morrow-copy h1 span:nth-child(2) {\n  color: var(--morrow-ember);\n  font-style: italic;\n  animation-delay: 336ms;\n}\n\n.morrow-intro {\n  max-width: 38ch;\n  margin: 21px 0 0;\n  color: var(--morrow-muted);\n  font-size: clamp(0.92rem, 1.2vw, 1.08rem);\n  line-height: 1.55;\n  text-wrap: pretty;\n  animation: morrow-rise var(--morrow-ui) var(--morrow-out) 420ms both;\n}\n\n.morrow-actions {\n  display: flex;\n  align-items: center;\n  gap: 21px;\n  margin: 28px 0 0;\n  animation: morrow-rise var(--morrow-ui) var(--morrow-out) 490ms both;\n}\n\n.morrow-primary,\n.morrow-secondary {\n  display: inline-flex;\n  min-height: 49px;\n  align-items: center;\n  justify-content: center;\n  gap: 14px;\n  color: inherit;\n  font-size: 0.76rem;\n  font-weight: 600;\n  letter-spacing: 0.1em;\n  text-decoration: none;\n  text-transform: uppercase;\n  transition-property: color, background-color, border-color, transform, opacity;\n  transition-duration: var(--morrow-ui);\n  transition-timing-function: var(--morrow-snap);\n}\n\n.morrow-primary {\n  padding: 0 21px;\n  color: var(--morrow-ink);\n  background: var(--morrow-ember);\n  border: 1px solid var(--morrow-ember);\n}\n\n.morrow-secondary {\n  padding: 0 7px;\n  border-bottom: 1px solid var(--morrow-line);\n}\n\n.morrow-primary:focus-visible,\n.morrow-secondary:focus-visible,\n.morrow-links a:focus-visible,\n.morrow-visit:focus-visible,\n.morrow-brand:focus-visible {\n  outline: 2px solid var(--morrow-bone);\n  outline-offset: 4px;\n}\n\n.morrow-primary:active,\n.morrow-secondary:active,\n.morrow-links a:active,\n.morrow-visit:active,\n.morrow-brand:active {\n  transform: scale(0.97);\n  opacity: 0.78;\n}\n\n.morrow-roast {\n  position: absolute;\n  right: 28px;\n  bottom: 42px;\n  display: grid;\n  grid-template-columns: auto auto;\n  align-items: end;\n  gap: 14px;\n  padding: 14px 0 0;\n  border-top: 1px solid var(--morrow-line);\n  animation: morrow-rise var(--morrow-ui) var(--morrow-out) 560ms both;\n}\n\n.morrow-index {\n  color: var(--morrow-ember);\n  font-family: 'Instrument Serif', serif;\n  font-size: 2.5rem;\n  line-height: 0.8;\n}\n\n.morrow-roast p,\n.morrow-edition {\n  margin: 0;\n  font-size: 0.7rem;\n  font-weight: 600;\n  letter-spacing: 0.11em;\n  text-transform: uppercase;\n}\n\n.morrow-roast span {\n  color: var(--morrow-muted);\n  font-size: 0.66rem;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n}\n\n.morrow-edition {\n  position: absolute;\n  right: 28px;\n  top: 98px;\n  color: var(--morrow-muted);\n  writing-mode: vertical-rl;\n  animation: morrow-fade var(--morrow-ui) var(--morrow-out) 630ms both;\n}\n\n@media (hover: hover) {\n  .morrow-brand:hover {\n    color: var(--morrow-ember);\n    transform: translateX(7px);\n  }\n\n  .morrow-links a:hover,\n  .morrow-visit:hover,\n  .morrow-secondary:hover {\n    color: var(--morrow-ember);\n    transform: translateY(-2px);\n  }\n\n  .morrow-primary:hover {\n    color: var(--morrow-bone);\n    background: transparent;\n    transform: translateY(-2px);\n  }\n\n  .morrow-hero:hover .morrow-media {\n    transform: scale(1.055);\n  }\n}\n\n@keyframes morrow-rise {\n  from {\n    opacity: 0;\n    transform: translateY(21px);\n  }\n  to {\n    opacity: 1;\n    transform: translateY(0);\n  }\n}\n\n@keyframes morrow-fade {\n  from { opacity: 0; }\n  to { opacity: 1; }\n}\n\n@keyframes morrow-image {\n  from {\n    opacity: 0;\n    transform: scale(1.08);\n  }\n  to {\n    opacity: 1;\n    transform: scale(1.035);\n  }\n}\n\n@media (max-width: 700px) {\n  .morrow-media {\n    background-position: 70% center;\n  }\n\n  .morrow-wash {\n    background:\n      linear-gradient(0deg, oklch(12% 0.018 50 / 0.98) 0%, oklch(12% 0.018 50 / 0.7) 62%, oklch(12% 0.018 50 / 0.2) 100%),\n      linear-gradient(90deg, oklch(12% 0.018 50 / 0.74) 0%, transparent 100%);\n  }\n\n  .morrow-nav {\n    grid-template-columns: minmax(0, 1fr) auto;\n    gap: 21px;\n    padding: 21px 21px 0;\n  }\n\n  .morrow-brand {\n    font-size: clamp(3.3rem, 18vw, 5.8rem);\n  }\n\n  .morrow-links {\n    display: none;\n  }\n\n  .morrow-visit {\n    align-self: start;\n  }\n\n  .morrow-copy {\n    left: 21px;\n    bottom: 161px;\n    width: calc(100% - 42px);\n  }\n\n  .morrow-copy h1 {\n    max-width: 10ch;\n    font-size: clamp(3.5rem, 16vw, 5.6rem);\n  }\n\n  .morrow-intro {\n    max-width: 30ch;\n  }\n\n  .morrow-actions {\n    flex-wrap: wrap;\n    gap: 14px;\n    margin: 21px 0 0;\n  }\n\n  .morrow-roast {\n    right: 21px;\n    bottom: 28px;\n    left: 21px;\n    justify-content: space-between;\n  }\n\n  .morrow-edition {\n    display: none;\n  }\n}\n\n@media (max-height: 700px) and (min-width: 701px) {\n  .morrow-copy {\n    bottom: 28px;\n  }\n\n  .morrow-intro {\n    margin: 14px 0 0;\n  }\n\n  .morrow-actions {\n    margin: 21px 0 0;\n  }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .morrow-hero *,\n  .morrow-hero *::before,\n  .morrow-hero *::after {\n    animation-duration: 1ms !important;\n    animation-delay: 0ms !important;\n    scroll-behavior: auto !important;\n    transition-duration: 1ms !important;\n  }\n}\n</style><style>\n.morrow-hero {\n  container-type: inline-size;\n}\n\n@container (max-width: 700px) {\n  .morrow-media {\n    background-position: 70% center;\n  }\n\n  .morrow-wash {\n    background:\n      linear-gradient(0deg, oklch(12% 0.018 50 / 0.98) 0%, oklch(12% 0.018 50 / 0.7) 62%, oklch(12% 0.018 50 / 0.2) 100%),\n      linear-gradient(90deg, oklch(12% 0.018 50 / 0.74) 0%, transparent 100%);\n  }\n\n  .morrow-nav {\n    grid-template-columns: minmax(0, 1fr) auto;\n    gap: 21px;\n    padding: 21px 21px 0;\n  }\n\n  .morrow-brand {\n    font-size: clamp(3.3rem, 18cqw, 5.8rem);\n  }\n\n  .morrow-links {\n    display: none;\n  }\n\n  .morrow-visit {\n    align-self: start;\n  }\n\n  .morrow-copy {\n    left: 21px;\n    bottom: 161px;\n    width: calc(100% - 42px);\n  }\n\n  .morrow-copy h1 {\n    max-width: 10ch;\n    font-size: clamp(3.5rem, 16cqw, 5.6rem);\n  }\n\n  .morrow-intro {\n    max-width: 30ch;\n  }\n\n  .morrow-actions {\n    flex-wrap: wrap;\n    gap: 14px;\n    margin: 21px 0 0;\n  }\n\n  .morrow-roast {\n    right: 21px;\n    bottom: 28px;\n    left: 21px;\n    justify-content: space-between;\n  }\n\n  .morrow-edition {\n    display: none;\n  }\n}\n</style><style>.morrow-hero { min-height: calc(100svh - 42px); }</style><style>\n.morrow-nav {\n  gap: 24px;\n  padding: 12px 24px 0;\n}\n\n.morrow-links {\n  gap: 24px;\n}\n\n.morrow-visit {\n  gap: 12px;\n}\n\n.morrow-copy {\n  left: 24px;\n  bottom: 24px;\n  width: min(56rem, calc(100% - 48px));\n}\n\n.morrow-kicker {\n  margin: 0 0 12px;\n}\n\n.morrow-intro {\n  margin: 12px 0 0;\n}\n\n.morrow-actions {\n  gap: 12px;\n  margin: 12px 0 0;\n}\n\n.morrow-primary,\n.morrow-secondary {\n  gap: 12px;\n}\n\n.morrow-primary {\n  padding: 0 24px;\n}\n\n.morrow-secondary {\n  padding: 0 12px;\n}\n\n.morrow-roast {\n  right: 24px;\n  bottom: 24px;\n  gap: 12px;\n  padding: 12px 0 0;\n}\n\n.morrow-edition {\n  right: 24px;\n  top: 96px;\n}\n\n@container (max-width: 700px) {\n  .morrow-nav {\n    gap: 24px;\n    padding: 12px 24px 0;\n  }\n\n  .morrow-copy {\n    left: 24px;\n    bottom: 144px;\n    width: calc(100% - 48px);\n  }\n\n  .morrow-actions {\n    gap: 12px;\n    margin: 12px 0 0;\n  }\n\n  .morrow-roast {\n    right: 24px;\n    bottom: 24px;\n    left: 24px;\n  }\n}\n</style>"
+  }
+}
