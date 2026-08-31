@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mirror — Player Two</title>
+    <link rel="stylesheet" href="design-system/tokens.css">
+    <link rel="stylesheet" href="app.css">
+  </head>
+  <body>
+    <header class="bar">
+      <h1 class="bar__mark">MIRROR</h1>
+      <p class="bar__status">
+        <span id="s-entry">no model context</span> ·
+        <span id="s-tools">0 tools</span> ·
+        <span id="s-tier">tier 1</span> ·
+        <span id="s-version">v1</span>
+      </p>
+    </header>
+
+    <main id="stage" class="stage" aria-live="polite"></main>
+
+    <aside class="panel">
+      <h2 class="panel__title">Shared log</h2>
+      <ol id="log" class="log"></ol>
+      <p id="flash" class="flash" role="status" hidden></p>
+      <div class="panel__controls">
+        <button type="button" id="grant" hidden>Open the dossier</button>
+        <button type="button" id="export">Export</button>
+        <button type="button" id="restart">Restart</button>
+      </div>
+      <p class="panel__note">
+        The reveal, the verdict and the dossier are yours. Your agent has no tool for any of them.
+      </p>
+    </aside>
+
+    <script type="module" src="src/ui/shell.js"></script>
+  </body>
+</html>

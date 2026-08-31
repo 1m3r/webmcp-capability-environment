@@ -1,0 +1,20 @@
+import { createDoc, reduce, isComplete, DOSSIER_ROUND } from './game.js';
+import { renderRound, renderPortrait } from './render.js';
+import { buildTools } from './tools.js';
+
+export const mirror = {
+  id: 'mirror',
+  title: 'Mirror',
+  storageKey: 'p2.mirror.v1',
+  createDoc,
+  reduce,
+  isComplete,
+  buildTools,
+  render: renderRound,
+  renderPortrait,
+  exportBase: 'mirror',
+  /* The only thing the shell needs to know about this game's unlock. */
+  canGrant: (doc) =>
+    doc.tier === 1 && doc.rounds.filter((r) => r.state === 'judged').length >= DOSSIER_ROUND,
+  grantLabel: 'Open the dossier'
+};

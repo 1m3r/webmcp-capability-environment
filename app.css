@@ -1,0 +1,225 @@
+/* Mirror — layout and components. Tone: LATE NIGHT RADIO.
+   Every colour, face and step comes from design-system/tokens.css.
+
+   The two accents are spent on exactly one state each: --signal means
+   committed, --reveal means revealed. Neither appears on a border, a hover or
+   a focus ring, because the page teaches their meaning by never diluting it. */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr minmax(19rem, 25rem);
+  grid-template-rows: auto 1fr;
+  min-height: 100vh;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-text);
+  font-size: var(--step-0);
+  line-height: 1.5;
+}
+
+/* ---- status bar ------------------------------------------------------ */
+
+.bar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--rule);
+  background: var(--ground-raised);
+}
+.bar__mark {
+  font-family: var(--font-display);
+  font-size: var(--step-1);
+  letter-spacing: 0.22em;
+  margin: 0;
+}
+.bar__status {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+  margin: 0;
+}
+
+/* ---- the round ------------------------------------------------------- */
+
+.stage { padding: var(--space-5) var(--space-4); display: grid; justify-items: center; }
+.round { width: min(100%, 48rem); }
+
+.round__count {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+  margin: 0 0 var(--space-2);
+}
+.round__question {
+  font-family: var(--font-display);
+  font-size: var(--step-3);
+  font-weight: 500;
+  line-height: 1.1;
+  margin: 0;
+  max-width: 22ch;
+}
+.round__subject {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+  margin: var(--space-2) 0 0;
+}
+
+/* The agent's card sits higher and further left: it answered first, and the
+   layout says so before any text does. Never a mirror — that would imply
+   simultaneity, which this game does not have. */
+.round__cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  margin: var(--space-5) 0 var(--space-4);
+  align-items: start;
+}
+.card--agent { transform: translate(-0.75rem, -1.25rem); }
+.card--human { transform: translate(0.75rem, 1.25rem); }
+
+.card {
+  border: 1px solid var(--rule);
+  border-radius: 0.75rem;
+  padding: var(--space-3);
+  background: var(--ground-raised);
+  min-height: 8rem;
+  transition: box-shadow var(--dur-quick) var(--ease-signal),
+              border-color var(--dur-quick) var(--ease-signal);
+}
+.card h3 {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  font-weight: 400;
+  text-transform: lowercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-dim);
+  margin: 0 0 var(--space-2);
+}
+
+/* COMMITTED. The one place cyan is allowed. This is how you learn your agent
+   has answered without being told a single word. */
+.card[data-committed="true"] {
+  border-color: var(--signal-dim);
+  box-shadow: 0 0 0 1px var(--signal-dim), 0 0 2.5rem -0.75rem var(--signal);
+}
+.status { font-family: var(--font-mono); font-size: var(--step--1); margin: 0; }
+.status.waiting { color: var(--ink-dim); }
+.status.committed { color: var(--signal); }
+
+/* REVEALED. The one place amber is allowed, and the page's only real moment. */
+.answer {
+  font-family: var(--font-display);
+  font-size: var(--step-2);
+  line-height: 1.2;
+  color: var(--reveal);
+  margin: 0;
+  animation: land var(--dur-reveal) var(--ease-signal) both;
+}
+.card--agent .answer { animation-delay: 0ms; }
+.card--human .answer { animation-delay: 80ms; }
+
+@keyframes land {
+  from { opacity: 0; transform: translateY(0.5rem); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ---- human input ----------------------------------------------------- */
+
+.round__form { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-4); }
+.round__form label {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+  flex: 0 0 auto;
+}
+.round__form input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--rule);
+  border-radius: 0.5rem;
+  background: var(--ground);
+  color: var(--ink);
+  font: inherit;
+}
+.round__form input::placeholder { color: var(--ink-dim); }
+.round__form input:disabled, .round__form button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+button {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--rule);
+  border-radius: 0.5rem;
+  background: var(--ground-raised);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  cursor: pointer;
+  transition: transform var(--dur-quick) var(--ease-signal);
+}
+button:not(:disabled):hover { transform: translateY(-1px); }
+button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+.round__controls { display: flex; gap: var(--space-2); margin-top: var(--space-4); }
+
+/* ---- the shared log -------------------------------------------------- */
+
+.panel {
+  border-left: 1px solid var(--rule);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 0;
+}
+.panel__title {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ink-dim);
+  margin: 0;
+}
+.log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+}
+.log__entry {
+  display: grid;
+  grid-template-columns: 3.5rem 1fr;
+  gap: var(--space-1);
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--rule);
+}
+.log__actor { color: var(--ink-dim); }
+.log__entry--agent .log__actor { color: var(--signal); }
+.log__action { display: none; }
+.log__detail { color: var(--ink); overflow-wrap: anywhere; }
+.log__entry[data-outcome="refused"] .log__detail { color: var(--refusal); }
+
+.flash { color: var(--refusal); font-family: var(--font-mono); font-size: var(--step--1); margin: 0; }
+.panel__controls { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.panel__note { color: var(--ink-dim); font-size: var(--step--1); margin: 0; }
+
+/* ---- small screens: the offset collapses rather than surviving -------- */
+
+@media (max-width: 60rem) {
+  body { grid-template-columns: 1fr; }
+  .round__cards { grid-template-columns: 1fr; gap: var(--space-3); }
+  .card--agent, .card--human { transform: none; }
+  .round__question { font-size: var(--step-2); }
+  .panel { border-left: 0; border-top: 1px solid var(--rule); }
+  .round__form { flex-wrap: wrap; }
+}
