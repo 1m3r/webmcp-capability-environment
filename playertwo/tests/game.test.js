@@ -175,3 +175,42 @@ test('isComplete is true only when every round is judged', () => {
   assert.equal(r.ok, false);
   assert.equal(r.code, 'GAME_OVER');
 });
+
+test('with the opt-out on, the human is refused and the reveal opens anyway', () => {
+  let doc = createDoc(0, { answerAboutAgent: false });
+  doc = reduce(doc, { type: 'agent_submit', text: 'a kettle' }).doc;
+  assert.equal(doc.rounds[0].state, 'agent_committed');
+
+  const refused = reduce(doc, { type: 'human_submit', text: 'anything' });
+  assert.equal(refused.ok, false);
+  assert.equal(refused.code, 'EXCUSED');
+  assert.match(refused.message, /your agent’s alone/);
+
+  const revealed = reduce(doc, { type: 'reveal' });
+  assert.equal(revealed.ok, true, 'an excused round must be revealable from agent_committed');
+  assert.equal(revealed.doc.rounds[0].state, 'revealed');
+});
+
+test('the opt-out can be toggled and is logged', () => {
+  const r = reduce(createDoc(), { type: 'set_answer_about_agent', value: false });
+  assert.equal(r.ok, true);
+  assert.equal(r.doc.answerAboutAgent, false);
+  assert.equal(r.doc.log.at(-1).actor, 'human');
+  assert.equal(r.doc.log.at(-1).action, 'set_answer_about_agent');
+});
+
+test('THE DEADLOCK TEST: opting out after the agent commits still reveals', () => {
+  let doc = createDoc();
+  doc = reduce(doc, { type: 'agent_submit', text: 'a kettle' }).doc;
+  doc = reduce(doc, { type: 'set_answer_about_agent', value: false }).doc;
+  const revealed = reduce(doc, { type: 'reveal' });
+  assert.equal(revealed.ok, true,
+    'toggling mid-round must not strand the round with no legal move');
+});
+
+test('the opt-out is refused in quiz mode, where one answer compares to nothing', () => {
+  const r = reduce(createDoc(0, { mode: 'quiz' }), { type: 'set_answer_about_agent', value: false });
+  assert.equal(r.ok, false);
+  assert.equal(r.code, 'NOT_IN_QUIZ');
+  assert.match(r.message, /quiz/i);
+});
