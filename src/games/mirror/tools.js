@@ -167,7 +167,8 @@ export function buildTools(ctx) {
     inputSchema: { type: 'object', properties: {} },
     execute: async (_input, _options = {}) => {
       apply({ type: 'read', text: 'get_field_manual' });
-      return text(manualFor(ctx.getDoc().tier));
+      const doc = ctx.getDoc();
+      return text(manualFor(doc.tier, doc.mode));
     }
   };
 

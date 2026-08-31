@@ -75,6 +75,19 @@ test('the tier 1 manual states the turn order and does not mention the dossier',
     'tier 1 must not name a tool the agent does not have — that is an unfulfillable instruction');
 });
 
+test('the manual teaches the wait loop rather than leaving the agent to ask', () => {
+  const one = manualFor(1);
+  assert.match(one, /wait_for_game_update/);
+  assert.match(one, /do not ask/i, 'the manual must tell the agent not to wait to be told');
+  assert.match(one, /timedOut/, 'and what to do when the wait comes back empty');
+});
+
+test('the manual describes the mode being played and not the other one', () => {
+  assert.match(manualFor(1, 'portrait'), /about each other/i);
+  assert.doesNotMatch(manualFor(1, 'portrait'), /right answer exists/i);
+  assert.match(manualFor(1, 'quiz'), /right answer/i);
+});
+
 test('the tier 2 manual keeps everything from tier 1 and adds the dossier', () => {
   const two = manualFor(2);
   assert.ok(two.includes(manualFor(1)), 'tier 2 must not drop what tier 1 taught');
