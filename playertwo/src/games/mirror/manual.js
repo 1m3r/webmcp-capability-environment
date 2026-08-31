@@ -7,11 +7,7 @@
    A tier never names a tool it has not been given: an instruction the agent
    cannot follow is worse than no instruction at all. */
 
-const TIER_1 = `MIRROR — how this game works
-
-You and your teammate answer the same question about the same person, apart,
-and then the answers are set side by side. The subject alternates: some rounds
-are about them, some are about you.
+const CORE = `MIRROR — how this game works
 
 The order is fixed and it is not a formality. YOU ANSWER FIRST, every round.
 Your teammate cannot type anything until you have committed. This is what makes
@@ -20,25 +16,58 @@ yet, so nothing you can read anywhere could have told you what it was.
 
 Once you commit, the answer is locked. There is no tool to change it.
 
+KEEP PLAYING WITHOUT BEING TOLD TO.
+
+After you commit, call wait_for_game_update with the version number you last
+saw. It returns the moment your teammate does something — commits, reveals,
+judges, moves on — and it returns the round exactly as get_round would. Then
+act on what you find.
+
+Do not ask your teammate whether they are finished, and do not wait to be told
+to continue. They are looking at the page, not at this conversation. If the wait
+returns timedOut, nothing happened yet; call it again with the same version. If
+it returns reset, they restarted the game and you should read the round afresh.
+
+Say things out loud with say(). It is the only way your words reach the screen
+they are actually watching.
+
+What you cannot do: reveal a round, judge it, or move to the next one. Those
+belong to your teammate and there is no tool for any of them.`;
+
+const PORTRAIT = `
+
+THIS GAME IS PORTRAIT MODE
+
+You and your teammate answer about each other. The question is the same for
+both of you; the person it describes is not. You answer it about them, and they
+answer it about you.
+
+Nothing here has a right answer. What is being asked for is a read, and your
+teammate will judge whether yours landed.
+
 How to answer well:
 
   Answer with a portrait, not a label. "A lighthouse at the end of its shift"
   beats "tired". The specific answer is the one that can be judged, and it is
   the one worth reading at the reveal.
 
-  Commit to one thing. Listing three possibilities is a way of not answering,
-  and it cannot match.
+  Commit to one thing. Listing three possibilities is a way of not answering.
 
-  When the round is about you, answer about yourself honestly rather than
-  flatteringly. The point of the game is the gap between how two people see
-  something, and you are one of the two.
+  Sometimes your teammate sits a round out and only you answer. That is their
+  choice and it is not a mistake to point out.`;
 
-  Say things out loud with say(). Your teammate is looking at the page, not at
-  this conversation, so anything you want them to hear during a round has to go
-  through that tool to reach them.
+const QUIZ = `
 
-What you cannot do: reveal a round, judge a match, or move to the next round.
-Those belong to your teammate and there is no tool for any of them.`;
+THIS GAME IS QUIZ MODE
+
+Every question has a right answer, and each round one of you knows it while the
+other guesses. get_round tells you which you are.
+
+When you are guessing, guess. One concrete answer, the most likely one — a
+hedge cannot match. When you know, answer plainly and honestly rather than
+interestingly; your teammate is trying to reach the same words.
+
+You are being scored on whether the two answers agree.`;
 
 const TIER_2 = `
 
@@ -50,9 +79,10 @@ been revealed so far, in both columns, with the verdict.
 Read it before you answer. You have four rounds of evidence about how this
 person actually answers — their register, how literal they are, whether they
 reach for objects or for feelings. A miss in the dossier is worth more than a
-match: it marks a place where your model of them was wrong, and it tells you
-which direction to correct.`;
+hit: it marks a place where your model of them was wrong, and it tells you which
+direction to correct.`;
 
-export function manualFor(tier) {
-  return tier >= 2 ? TIER_1 + TIER_2 : TIER_1;
+export function manualFor(tier, mode = 'portrait') {
+  const base = CORE + (mode === 'quiz' ? QUIZ : PORTRAIT);
+  return tier >= 2 ? base + TIER_2 : base;
 }
