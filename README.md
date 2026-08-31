@@ -3,7 +3,26 @@
 Can a web page, through WebMCP alone, give a user's existing general-purpose
 agent a capability it did not arrive with — no install, no configuration?
 
-## Where the project is
+## Keel — the application
+
+**[keel/](keel/)** turns a rough concept brief into a blueprint that is ready to
+execute, by handing a visiting agent the research, brainstorming, planning and
+critique method one phase at a time, and refusing to open the next phase until
+that phase's checks pass. The human confirms every transition on the shared
+screen; there is no tool for any decision that belongs to them.
+
+    node keel/server.mjs          →  http://localhost:5178
+    node --test 'keel/tests/*.test.js'
+
+Design: [docs/superpowers/specs/2026-08-31-keel-design.md](docs/superpowers/specs/2026-08-31-keel-design.md) ·
+build plan: [docs/superpowers/plans/2026-08-31-keel.md](docs/superpowers/plans/2026-08-31-keel.md) ·
+live-run protocol: [docs/KEEL-RUNBOOK.md](docs/KEEL-RUNBOOK.md).
+
+Keel is built on what the probe below established, and on the three defects its
+gate run found. That probe is **frozen** — see [FROZEN.md](FROZEN.md) — and
+everything under `public/` stays byte-reproducible.
+
+## Where the probe is
 
 **Level 0 — Transfer Probe: PASSED.** A page holding one arbitrary rule behind
 a WebMCP tool changed what a fresh ChatGPT agent produced. Control produced 1 of
