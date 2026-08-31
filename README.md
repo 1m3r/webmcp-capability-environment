@@ -11,13 +11,33 @@ achievement, and released by your click.
 
 The first game is **Mirror**.
 
-## Mirror
+## Mirror, in two modes
 
-Each round poses one question about a subject that alternates between the two of
-you. *What colour is this person? Which Greek god? What are they afraid of?*
+**Portrait.** Each round poses one question, and you answer it *about each
+other* — your agent reads you, you read your agent. *What colour is this person?
+Which Greek god? What are they afraid of?* Nothing has a right answer; you judge
+whether your agent's read of you landed. If you would rather only be read than
+do the reading, one checkbox sits you out and your agent answers alone.
+
+**Quiz.** Real questions with real answers, and each round one of you knows
+while the other guesses. *What is their favourite meal? Their favourite
+programming language?* Match 5 of 8 to pass. This is the mode the measurement
+runs in, because a match here is the guesser reaching an answer the other person
+actually holds.
+
 Both of you answer independently and in the dark, and the reveal sets the two
-answers side by side. When they match, your agent understood you. When they
-don't, the gap is the entertainment.
+answers side by side.
+
+## Your agent keeps playing on its own
+
+After it commits, it calls `wait_for_game_update` and the page tells it the
+moment you move. You never have to type "done" or "keep going".
+
+That tool is **the one thing in this codebase that touches no state** — no log
+entry, no version bump. Every other read logs through the reducer, and every
+reduce bumps the version, so a wait that logged would change the version it is
+waiting on and wake itself instantly, forever. It has four endings and all four
+are tested: moved, timed out, reset, disposed.
 
 ## Secrecy is a matter of order, not of rendering
 
@@ -60,8 +80,9 @@ files you download.
 node --test 'playertwo/tests/*.test.js'
 ```
 
-61 tests, no dependencies. `journey.test.js` drives a stub agent through all
-eight rounds headlessly, so the game is proven to close before any live run.
+95 tests, no dependencies. `journey.test.js` drives a stub agent through all
+eight rounds headlessly — including a self-driving agent that waits for its
+teammate between rounds — so the game is proven to close before any live run.
 
 ## How it is built
 
