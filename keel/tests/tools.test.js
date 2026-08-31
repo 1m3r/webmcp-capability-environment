@@ -148,3 +148,21 @@ test('check_ready reports every phase, not only the current one', async () => {
   assert.equal(out.ready, false);
   assert.deepEqual(Object.keys(out.phases), PHASES.map((p) => p.id));
 });
+
+test('a tool refuses when the workspace has moved on from its phase', async () => {
+  const c = ctx();
+  const intakeTools = buildTools('intake', c);
+  c.store.mutate({ actor: 'human', kind: 'confirm_advance', touched: ['phase'] }, (d) => { d.phase = 'interrogate'; });
+
+  const out = textOf(await call(intakeTools, 'record_intake', { summary: 's', knowns: [], unknowns: ['x'], assumptions: [] }));
+  assert.match(out, /belongs to the "intake" phase/);
+  assert.equal(c.store.get().intake, null, 'an out-of-phase call must not write');
+});
+
+test('the global tools work in every phase', async () => {
+  const c = ctx();
+  const intakeTools = buildTools('intake', c);
+  c.store.mutate({ actor: 'human', kind: 'confirm_advance', touched: ['phase'] }, (d) => { d.phase = 'ship'; });
+  const out = textOf(await call(intakeTools, 'get_state', {}));
+  assert.match(out, /"phase": "ship"/);
+});

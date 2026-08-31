@@ -448,6 +448,19 @@ export function buildTools(phaseId, ctx) {
       execute: async (input) => {
         let args = input || {};
         if (args.arguments) args = args.arguments;   // clients differ; accept both
+
+        /* Registration cannot be relied on for phase scoping: provideContext
+           replaces the tool set, but registerTool only adds and offers no way
+           to withdraw. So the phase boundary is enforced at call time. */
+        if (!GLOBAL_TOOLS.includes(name)) {
+          const current = ctx.store.get().phase;
+          if (current !== phaseId) {
+            return { content: [{ type: 'text', text:
+              'Not called: "' + name + '" belongs to the "' + phaseId + '" phase and this workspace is now in "' +
+              current + '". Call get_phase_guide for the method that applies here. Nothing was changed.' }] };
+          }
+        }
+
         let text;
         try {
           text = def.handler(ctx, args);
