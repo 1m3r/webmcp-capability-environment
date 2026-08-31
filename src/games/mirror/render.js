@@ -64,13 +64,13 @@ export function renderRound(doc) {
       ${answerCard('human', humanLabel, round.state, round.humanAnswer, revealed)}
     </div>
 
-    <form class="round__form" data-action="human_submit">
+    ${isExcused(doc) ? `<p class="round__excused">This round is your agent’s alone.</p>` : `<form class="round__form" data-action="human_submit">
       <label for="human-answer">${escapeHtml(humanLabel)}</label>
       <input id="human-answer" name="answer" type="text" autocomplete="off"
              placeholder="${canAnswer ? 'your answer' : 'your agent answers first'}"
              ${canAnswer ? '' : 'disabled'}>
       <button type="submit" ${canAnswer ? '' : 'disabled'}>Commit</button>
-    </form>
+    </form>`}
 
     <div class="round__controls">${controls.join('\n      ')}</div>
   </section>`;

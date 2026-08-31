@@ -31,6 +31,7 @@ const ACTOR = {
   say: 'agent',
   read: 'agent',
   human_submit: 'human',
+  set_answer_about_agent: 'human',
   reveal: 'human',
   judge: 'human',
   next: 'human',
@@ -106,6 +107,11 @@ export function reduce(doc, action, now = 0) {
         `round ${n} committed`);
 
     case 'human_submit':
+      if (isExcused(doc)) {
+        return refuse('EXCUSED',
+          'refused: this round is your agent’s alone — you chose not to answer about it. ' +
+          'Turn that back on if you want to answer.');
+      }
       if (!answer) {
         return refuse('EMPTY_ANSWER',
           'refused: an answer cannot be empty — commit to something, even a guess.');
@@ -175,6 +181,16 @@ export function reduce(doc, action, now = 0) {
           `refused: the dossier opens after ${DOSSIER_ROUND} judged rounds — ${judged} so far.`);
       }
       return accept({ tier: 2 }, 'tier 2 granted — get_dossier is now registered');
+    }
+
+    case 'set_answer_about_agent': {
+      if (doc.mode === 'quiz') {
+        return refuse('NOT_IN_QUIZ',
+          'refused: quiz rounds need both answers — with only one there is nothing to compare.');
+      }
+      const value = action.value === true;
+      return accept({ answerAboutAgent: value },
+        value ? 'answering about the agent' : 'sitting out the agent rounds');
     }
 
     default:
