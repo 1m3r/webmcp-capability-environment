@@ -24,11 +24,12 @@ function load() {
   try {
     const raw = localStorage.getItem(game.storageKey);
     if (raw) return JSON.parse(raw);
-  } catch { /* a corrupt or blocked store starts a fresh game rather than failing */ }
-  return game.createDoc(Date.now());
+  } catch { /* a corrupt or blocked store starts fresh rather than failing */ }
+  return null;   // no game yet: the start screen decides the mode
 }
 
 function save() {
+  if (!doc) return;
   try {
     localStorage.setItem(game.storageKey, JSON.stringify(doc));
   } catch { /* private mode: the game still plays, it just will not survive a reload */ }
@@ -82,14 +83,23 @@ function renderLog() {
 function renderStatus() {
   el('s-entry').textContent = found ? found.entry : 'no model context';
   el('s-tools').textContent = `${registration.registered} tools`;
-  el('s-tier').textContent = `tier ${doc.tier}`;
-  el('s-version').textContent = `v${doc.version}`;
+  el('s-tier').textContent = doc ? `tier ${doc.tier}` : 'no game';
+  el('s-version').textContent = doc ? `v${doc.version}` : 'v0';
   const grant = el('grant');
-  grant.hidden = !game.canGrant(doc);
+  grant.hidden = !doc || !game.canGrant(doc);
   grant.textContent = game.grantLabel;
+  const opt = el('panel-opt');
+  opt.hidden = !doc || doc.mode !== 'portrait';
+  if (doc) el('panel-opt-input').checked = doc.answerAboutAgent !== false;
 }
 
 function render() {
+  if (!doc) {
+    stage.innerHTML = game.renderStart();
+    el('log').innerHTML = '';
+    renderStatus();
+    return;
+  }
   stage.innerHTML = game.render(doc);
   renderLog();
   renderStatus();
@@ -98,6 +108,16 @@ function render() {
 /* ---- human input. None of this exists as a tool. --------------------- */
 
 stage.addEventListener('click', (event) => {
+  const mode = event.target.closest('[data-mode]');
+  if (mode) {
+    const answerAboutAgent = document.getElementById('opt-about-agent')?.checked !== false;
+    doc = game.createDoc(Date.now(), { mode: mode.dataset.mode, answerAboutAgent });
+    save();
+    render();
+    syncTools();
+    return;
+  }
+  if (!doc) return;
   const button = event.target.closest('[data-action]');
   if (!button || button.tagName !== 'BUTTON') return;
   const action = button.dataset.action;
@@ -108,7 +128,7 @@ stage.addEventListener('click', (event) => {
 
 stage.addEventListener('submit', (event) => {
   const form = event.target.closest('form[data-action="human_submit"]');
-  if (!form) return;
+  if (!form || !doc) return;
   event.preventDefault();
   const input = form.querySelector('#human-answer');
   dispatch({ type: 'human_submit', text: input.value });
@@ -117,15 +137,21 @@ stage.addEventListener('submit', (event) => {
 
 el('grant').addEventListener('click', () => dispatch({ type: 'grant_tier' }));
 
+el('panel-opt-input').addEventListener('change', (event) => {
+  dispatch({ type: 'set_answer_about_agent', value: event.target.checked });
+});
+
 el('restart').addEventListener('click', () => {
-  const started = doc.log.length > 0;
-  if (started && !confirm('Restart wipes every answer and the whole log. There is no undo. Continue?')) return;
-  doc = game.createDoc(Date.now());
-  save();
+  if (doc && doc.log.length > 0 &&
+      !confirm('Restart wipes every answer and the whole log. There is no undo. Continue?')) return;
+  doc = null;
+  try { localStorage.removeItem(game.storageKey); } catch { /* nothing to clear */ }
+  waits.notify(0);   // release any agent waiting on a version that will never come
   render();
 });
 
 el('export').addEventListener('click', () => {
+  if (!doc) return;
   for (const file of buildExport(doc, game.renderPortrait)) {
     const url = URL.createObjectURL(new Blob([file.body], { type: file.type }));
     const a = document.createElement('a');
