@@ -7,6 +7,10 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
+/* A class that sets display out-specifies the UA rule for [hidden]. Anything
+   the shell hides must stay hidden regardless of what styles it carries. */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   display: grid;
@@ -222,4 +226,60 @@ button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   .round__question { font-size: var(--step-2); }
   .panel { border-left: 0; border-top: 1px solid var(--rule); }
   .round__form { flex-wrap: wrap; }
+}
+
+/* ---- start screen ---------------------------------------------------- */
+
+.start { width: min(100%, 46rem); }
+.start__title { font-family: var(--font-display); font-size: var(--step-3); margin: 0 0 var(--space-4); }
+.start__modes { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+.start__mode {
+  display: grid;
+  gap: var(--space-2);
+  text-align: left;
+  padding: var(--space-3);
+  font-family: var(--font-text);
+  font-size: var(--step-0);
+}
+.start__mode strong { font-family: var(--font-display); font-size: var(--step-1); }
+.start__mode span { color: var(--ink-dim); }
+.start__opt { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-4); }
+.start__note { color: var(--ink-dim); font-size: var(--step--1); margin: var(--space-1) 0 0; }
+
+/* ---- excused round --------------------------------------------------- */
+
+.round__excused {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+  margin-top: var(--space-4);
+}
+
+/* ---- results --------------------------------------------------------- */
+
+.results { width: min(100%, 46rem); }
+.results__head { margin-bottom: var(--space-5); }
+.results__title { font-family: var(--font-display); font-size: var(--step-3); margin: 0; }
+.results__verdict {
+  font-family: var(--font-display);
+  font-size: var(--step-3);
+  letter-spacing: 0.08em;
+  margin: var(--space-2) 0 0;
+}
+.results__verdict.is-pass { color: var(--reveal); }
+.results__verdict.is-fail { color: var(--ink-dim); }
+.results__rate { font-family: var(--font-mono); color: var(--ink-dim); margin: var(--space-1) 0 0; }
+.results__round { border-top: 1px solid var(--rule); padding: var(--space-3) 0; }
+.results__round h3 { font-family: var(--font-mono); font-size: var(--step--1); font-weight: 400; color: var(--ink-dim); margin: 0 0 var(--space-2); }
+.results__answer { font-family: var(--font-display); font-size: var(--step-1); margin: 0 0 var(--space-1); }
+.results__answer span { display: block; font-family: var(--font-mono); font-size: var(--step--1); color: var(--ink-dim); }
+.results__mark { font-family: var(--font-mono); font-size: var(--step--1); margin: var(--space-2) 0 0; color: var(--ink-dim); }
+.results__round[data-verdict="landed"] .results__mark,
+.results__round[data-verdict="match"] .results__mark { color: var(--reveal); }
+.results__note { font-family: var(--font-mono); font-size: var(--step--1); color: var(--ink-dim); margin-top: var(--space-4); }
+
+.panel__opt { display: flex; align-items: center; gap: var(--space-1); font-family: var(--font-mono); font-size: var(--step--1); color: var(--ink-dim); }
+
+@media (max-width: 60rem) {
+  .start__modes { grid-template-columns: 1fr; }
 }
