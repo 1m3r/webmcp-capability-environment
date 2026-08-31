@@ -11,9 +11,14 @@ through WebMCP tool registration and nothing else, and the two of you play on
 one screen. Clearing stages is what releases new method and new verbs to it —
 and your click is what grants them.
 
-The first game, **Mirror**, asks one question per round about a subject that
-alternates between the two of you. Both answer in the dark; the reveal sets the
-answers side by side.
+The first game, **Mirror**, has two modes. In **Portrait** you each answer about
+the other, and you judge whether your agent's read of you landed. In **Quiz**
+the questions have real answers and one of you knows while the other guesses —
+match 5 of 8 to pass. Both answer in the dark; the reveal sets the answers side
+by side.
+
+Your agent keeps playing on its own: after it commits it calls
+`wait_for_game_update`, and the page tells it the moment you move.
 
 Secrecy rests on **order, not rendering**. A browser-driving agent reads the
 DOM, so "hidden until the reveal" cannot be a property of where the answer is

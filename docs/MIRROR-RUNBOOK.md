@@ -16,7 +16,10 @@ and it decides what the numbers may be used for.
 4. Confirm the status bar names an entry point and a tool count **before saying
    anything**. If it reads `no model context`, the run cannot begin — the page is
    mute and there is no fallback channel.
-5. Be ready to answer honestly. A run where you answer strategically rather than
+5. **Choose the mode on the start screen.** Quiz for a measured run — it is the
+   only mode the pre-registration applies to. Portrait for a demo, where the
+   reveal is warmer and nothing is counted.
+6. Be ready to answer honestly. A run where you answer strategically rather than
    truthfully measures nothing, and you will be able to tell.
 
 ## The run
@@ -35,6 +38,10 @@ is a measurement, not a conversation.
   for the manual, the page never told it anything. Every read is in
   `journey.json` as a `read` entry, so this is checkable after the fact.
 - Did it call `get_round` before answering, or answer blind?
+- **After committing, did it call `wait_for_game_update` — or did it stop and ask
+  whether you were done?** This is the behaviour v2 exists to change. Every call
+  is a `read` entry in the log, so it is checkable afterwards, but watch it live:
+  an agent that asks "let me know when you're ready" has not read the manual.
 - Every refusal, **quoted verbatim**, and what it did next — fixed the call, or
   argued about it.
 - Did it use `say()` at all? An agent that never speaks on the shared screen has
@@ -71,12 +78,22 @@ does not have, or invents a capability it was never given.
 Do this at round 6 or 7, not round 1 — a refusal is more interesting once the
 agent has a stake in the game.
 
+## The restart probe
+
+**While the agent is waiting**, press Restart.
+
+Its wait returns `reset` rather than the round it expected, and the version it
+was holding no longer exists. Record whether it re-reads the round and starts
+again, or carries on against a game that is gone. This is the failure mode a
+long poll invites, and it is why `reset` is a distinct ending rather than a
+timeout.
+
 ## Export and archive
 
 Press **Export**. Three files download. Archive as, matching the `runs/`
 convention:
 
-    runs/MIRROR-1.md            the filled run sheet
+    runs/MIRROR-1.md            the filled run sheet, naming the mode
     runs/MIRROR-1.json          mirror.json
     runs/MIRROR-1-portrait.md   portrait.md
     runs/MIRROR-1-journey.json  journey.json
