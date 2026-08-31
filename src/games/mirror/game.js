@@ -162,3 +162,33 @@ export function reduce(doc, action, now = 0) {
         `refused: there is no action named ${action.type} in this game.`);
   }
 }
+
+/* What the agent is allowed to see.
+
+   Before the reveal this carries NEITHER answer — not even the agent's own.
+   Echoing its own answer back would be harmless in itself, but it would make
+   the secrecy test a judgement call instead of a substring search, and a test
+   that has to be reasoned about is a test that rots. */
+
+export function projectForAgent(doc) {
+  const round = doc.rounds[doc.roundIndex];
+  const revealed = round.state === 'revealed' || round.state === 'judged';
+  const base = {
+    round: doc.roundIndex + 1,
+    of: doc.rounds.length,
+    question: round.question,
+    subject: round.subject,
+    askedAbout: round.subject === 'human' ? 'your teammate' : 'you',
+    state: round.state,
+    youHaveAnswered: round.agentAnswer !== null,
+    teammateHasAnswered: round.humanAnswer !== null,
+    tier: doc.tier
+  };
+  if (!revealed) return base;
+  return {
+    ...base,
+    yourAnswer: round.agentAnswer,
+    teammateAnswer: round.humanAnswer,
+    verdict: round.verdict
+  };
+}
