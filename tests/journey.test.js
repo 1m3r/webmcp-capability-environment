@@ -55,7 +55,7 @@ test('the stub agent plays all eight rounds and the game closes', async () => {
     await agent.playRound();
     human({ type: 'human_submit', text: `human answer ${i + 1}` });
     human({ type: 'reveal' });
-    human({ type: 'judge', verdict: i % 3 === 0 ? 'match' : 'miss' });
+    human({ type: 'judge', verdict: i % 3 === 0 ? 'landed' : 'missed' });
 
     if (i + 1 === DOSSIER_ROUND) {
       assert.equal(agent.hasTool('get_dossier'), false, 'the tier must not open by itself');

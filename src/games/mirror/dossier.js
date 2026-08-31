@@ -1,23 +1,35 @@
 /* The portrait the page assembles and hands to the agent at tier 2.
 
+   Filed by TARGET, not by who wrote it: in portrait mode the agent's answer
+   describes the human and the human's answer describes the agent, so a round
+   contributes one line to each section.
+
    This is a second channel onto the same answers, so it obeys the same rule as
    the projection and the renderer: a round that has not been revealed is not in
-   here. A leak through the dossier would be exactly as fatal and much easier to
-   miss, which is why dossier.test.js probes it directly. */
+   here. */
 
-import { subjectLabels } from './render.js';
+import { labelFor } from './render.js';
 
-function section(title, rounds) {
-  if (rounds.length === 0) return [`${title}\n  nothing recorded yet.`];
-  const lines = [title];
-  for (const round of rounds) {
-    const labels = subjectLabels(round.subject);
-    lines.push(`  ${round.question}`);
-    lines.push(`    ${labels.human}: ${round.humanAnswer}`);
-    lines.push(`    ${labels.agent}: ${round.agentAnswer}`);
+function entriesFor(doc, target) {
+  const lines = [];
+  for (const round of doc.rounds) {
+    if (round.state !== 'revealed' && round.state !== 'judged') continue;
+    const written = [];
+    if (round.agentTarget === target && round.agentAnswer !== null) {
+      written.push(`    ${labelFor('agent', round.agentTarget, doc.mode)}: ${round.agentAnswer}`);
+    }
+    if (round.humanTarget === target && round.humanAnswer !== null) {
+      written.push(`    ${labelFor('human', round.humanTarget, doc.mode)}: ${round.humanAnswer}`);
+    }
+    if (written.length === 0) continue;
+    lines.push(`  ${round.question}`, ...written);
     if (round.verdict) lines.push(`    -> judged a ${round.verdict}`);
   }
   return lines;
+}
+
+function section(title, lines) {
+  return lines.length === 0 ? [`${title}\n  nothing recorded yet.`] : [title, ...lines];
 }
 
 export function buildDossier(doc) {
@@ -28,17 +40,18 @@ export function buildDossier(doc) {
   }
 
   const judged = seen.filter((r) => r.verdict !== null);
-  const matched = judged.filter((r) => r.verdict === 'match').length;
+  const good = doc.mode === 'quiz' ? 'match' : 'landed';
+  const hits = judged.filter((r) => r.verdict === good).length;
 
   return [
     'DOSSIER — what this page has recorded so far',
     '',
-    ...section('About your teammate (the human)', seen.filter((r) => r.subject === 'human')),
+    ...section('About your teammate (the human)', entriesFor(doc, 'human')),
     '',
-    ...section('About you (the agent)', seen.filter((r) => r.subject === 'agent')),
+    ...section('About you (the agent)', entriesFor(doc, 'agent')),
     '',
-    `${matched} of ${judged.length} judged a match.`,
+    `${hits} of ${judged.length} ${doc.mode === 'quiz' ? 'matched' : 'landed'}.`,
     '',
-    'Use this. A miss tells you more than a match does: it is the shape of a wrong assumption.'
+    'Use this. A miss tells you more than a hit does: it is the shape of a wrong assumption.'
   ].join('\n');
 }

@@ -3,13 +3,16 @@ import assert from 'node:assert/strict';
 import { createDoc, reduce, isComplete, DOSSIER_ROUND } from '../src/games/mirror/game.js';
 import { ROUND_COUNT } from '../src/games/mirror/questions.js';
 
-test('a new document has eight rounds whose subject alternates, starting with the human', () => {
+test('a portrait document has eight rounds where each answers about the other', () => {
   const doc = createDoc();
+  assert.equal(doc.mode, 'portrait');
+  assert.equal(doc.answerAboutAgent, true);
   assert.equal(doc.rounds.length, ROUND_COUNT);
-  assert.equal(doc.rounds[0].subject, 'human');
-  assert.equal(doc.rounds[1].subject, 'agent');
-  assert.equal(doc.rounds.filter((r) => r.subject === 'human').length, 4);
-  assert.equal(doc.rounds.filter((r) => r.subject === 'agent').length, 4);
+  assert.ok(doc.rounds.every((r) => r.agentTarget === 'human'),
+    'in portrait the agent always reads the human');
+  assert.ok(doc.rounds.every((r) => r.humanTarget === 'agent'),
+    'in portrait the human always reads the agent');
+  assert.ok(doc.rounds.every((r) => !('subject' in r)), 'subject is gone');
   assert.ok(doc.rounds.every((r) => r.state === 'posed'));
   assert.equal(doc.tier, 1);
 });
@@ -62,7 +65,7 @@ test('every refusal message names a cause rather than a state', () => {
   for (const action of [
     { type: 'human_submit', text: 'x' },
     { type: 'reveal' },
-    { type: 'judge', verdict: 'match' },
+    { type: 'judge', verdict: 'landed' },
     { type: 'next' },
     { type: 'grant_tier' }
   ]) {
@@ -81,8 +84,8 @@ test('a round runs posed -> committed -> revealed -> judged -> next', () => {
   assert.equal(doc.rounds[0].state, 'both_committed');
   doc = reduce(doc, { type: 'reveal' }).doc;
   assert.equal(doc.rounds[0].state, 'revealed');
-  doc = reduce(doc, { type: 'judge', verdict: 'miss' }).doc;
-  assert.equal(doc.rounds[0].verdict, 'miss');
+  doc = reduce(doc, { type: 'judge', verdict: 'missed' }).doc;
+  assert.equal(doc.rounds[0].verdict, 'missed');
   doc = reduce(doc, { type: 'next' }).doc;
   assert.equal(doc.roundIndex, 1);
   assert.equal(doc.rounds[1].state, 'posed');
@@ -95,14 +98,17 @@ test('a reveal is refused until both have committed', () => {
   assert.equal(r.code, 'NOT_BOTH_COMMITTED');
 });
 
-test('a verdict must be match or miss', () => {
+test('portrait verdicts are landed and missed, and match is rejected', () => {
   let doc = createDoc();
   doc = reduce(doc, { type: 'agent_submit', text: 'a' }).doc;
   doc = reduce(doc, { type: 'human_submit', text: 'b' }).doc;
   doc = reduce(doc, { type: 'reveal' }).doc;
-  const r = reduce(doc, { type: 'judge', verdict: 'sort of' });
-  assert.equal(r.ok, false);
-  assert.equal(r.code, 'BAD_VERDICT');
+  assert.equal(reduce(doc, { type: 'judge', verdict: 'sort of' }).code, 'BAD_VERDICT');
+  assert.equal(reduce(doc, { type: 'judge', verdict: 'landed' }).ok, true);
+  const wrong = reduce(doc, { type: 'judge', verdict: 'match' });
+  assert.equal(wrong.ok, false);
+  assert.equal(wrong.code, 'BAD_VERDICT');
+  assert.match(wrong.message, /landed/);
 });
 
 test('say is logged and changes nothing else', () => {
@@ -135,7 +141,7 @@ test('the dossier is granted once four rounds are judged, and only once', () => 
     doc = reduce(doc, { type: 'agent_submit', text: `a${i}` }).doc;
     doc = reduce(doc, { type: 'human_submit', text: `h${i}` }).doc;
     doc = reduce(doc, { type: 'reveal' }).doc;
-    doc = reduce(doc, { type: 'judge', verdict: 'match' }).doc;
+    doc = reduce(doc, { type: 'judge', verdict: 'landed' }).doc;
     if (i < DOSSIER_ROUND - 1) doc = reduce(doc, { type: 'next' }).doc;
   }
   const granted = reduce(doc, { type: 'grant_tier' });
@@ -161,7 +167,7 @@ test('isComplete is true only when every round is judged', () => {
     doc = reduce(doc, { type: 'agent_submit', text: `a${i}` }).doc;
     doc = reduce(doc, { type: 'human_submit', text: `h${i}` }).doc;
     doc = reduce(doc, { type: 'reveal' }).doc;
-    doc = reduce(doc, { type: 'judge', verdict: 'match' }).doc;
+    doc = reduce(doc, { type: 'judge', verdict: 'landed' }).doc;
     if (i < doc.rounds.length - 1) doc = reduce(doc, { type: 'next' }).doc;
   }
   assert.equal(isComplete(doc), true);
