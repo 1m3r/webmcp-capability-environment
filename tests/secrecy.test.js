@@ -88,3 +88,62 @@ test('answers are escaped, so an answer cannot inject markup', () => {
 test('escapeHtml handles the five characters that matter', () => {
   assert.equal(escapeHtml(`<&>"'`), '&lt;&amp;&gt;&quot;&#39;');
 });
+
+import { renderResults, renderGame, renderStart } from '../src/games/mirror/render.js';
+import { isComplete } from '../src/games/mirror/game.js';
+import { QUIZ_PASS } from '../src/games/mirror/questions.js';
+
+function finished(mode, verdicts) {
+  let doc = createDoc(0, { mode });
+  for (let i = 0; i < 8; i++) {
+    doc = reduce(doc, { type: 'agent_submit', text: `agent ${i}` }).doc;
+    doc = reduce(doc, { type: 'human_submit', text: `human ${i}` }).doc;
+    doc = reduce(doc, { type: 'reveal' }).doc;
+    doc = reduce(doc, { type: 'judge', verdict: verdicts[i] }).doc;
+    if (i < 7) doc = reduce(doc, { type: 'next' }).doc;
+  }
+  return doc;
+}
+
+const LANDED = Array(8).fill('landed');
+
+test('the results screen shows every round and the rate', () => {
+  const doc = finished('portrait', ['landed', 'missed', 'landed', 'missed', 'landed', 'missed', 'landed', 'missed']);
+  assert.equal(isComplete(doc), true);
+  const html = renderResults(doc);
+  assert.match(html, /4 of 8/);
+  for (let i = 0; i < 8; i++) {
+    assert.ok(html.includes(`agent ${i}`), `round ${i + 1} missing from the results`);
+    assert.ok(html.includes(`human ${i}`), `round ${i + 1} missing from the results`);
+  }
+});
+
+test('a quiz at or above the threshold passes, and below it does not', () => {
+  const pass = Array(8).fill('miss');
+  for (let i = 0; i < QUIZ_PASS; i++) pass[i] = 'match';
+  assert.match(renderResults(finished('quiz', pass)), /PASSED/);
+
+  const fail = Array(8).fill('miss');
+  for (let i = 0; i < QUIZ_PASS - 1; i++) fail[i] = 'match';
+  assert.match(renderResults(finished('quiz', fail)), /NOT PASSED/);
+});
+
+test('renderGame shows the round while playing and the results when finished', () => {
+  assert.match(renderGame(createDoc()), /round__question/);
+  assert.match(renderGame(finished('portrait', LANDED)), /results/);
+});
+
+test('the start screen offers both modes and the opt-out', () => {
+  const html = renderStart();
+  assert.match(html, /data-mode="portrait"/);
+  assert.match(html, /data-mode="quiz"/);
+  assert.match(html, /id="opt-about-agent"/);
+});
+
+test('the results screen is covered by the secrecy rule too', () => {
+  for (const [name, doc] of statesBeforeReveal()) {
+    const html = renderGame(doc);
+    assert.ok(!html.includes(AGENT), `${name}: renderGame leaked the agent's answer`);
+    assert.ok(!html.includes(HUMAN), `${name}: renderGame leaked the human's answer`);
+  }
+});
