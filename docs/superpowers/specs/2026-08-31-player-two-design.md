@@ -16,12 +16,23 @@ registration and nothing else, and the two of you play on one screen.
 
 The user installs nothing. The agent arrives with no knowledge of the world and
 no way to touch it except the tools the page registers. As the team clears
-levels, the page hands the agent new verbs and new method — capability released
-by achievement, and released by a human's click.
+stages — rounds in one game, levels in the other — the page hands the agent new
+verbs and new method: capability released by achievement, and released by a
+human's click.
 
-The platform ships with one game, **Warren**: two avatars, one dungeon.
+The platform ships with two games, built in this order:
 
-## 2. Why this domain
+| | game | shape | spec |
+|---|---|---|---|
+| 1 | **Mirror** | text, commit–reveal — each answers a question about the other | `2026-08-31-mirror-design.md` |
+| 2 | **Warren** | grid, two avatars in one dungeon | §4 below |
+
+Mirror is first because it is the smallest thing that exercises the whole
+architecture. Warren is second because it is the one that cannot be faked: two
+games this different sharing one spine is what makes "platform" a description
+rather than an aspiration.
+
+## 2. Why these games
 
 Against the §7.4 filter of the master context, all four clauses hold, and the
 fourth holds *harder* than in any previous build here:
@@ -32,6 +43,12 @@ fourth holds *harder* than in any previous build here:
 | The check is verifiable | Total. The world knows. Cleared or not cleared is a predicate over tile occupancy, with no judgement in it. |
 | The state is expensive to carry | Level state, both bodies' positions, carried items, cleared levels, unlocked tier. A fresh chat reconstructs none of it. |
 | Human judgment is load-bearing | The human is not an approver. **The human is a player, and the level cannot be cleared without them.** |
+
+Mirror satisfies the same four differently: the method is a commit–reveal
+discipline no model volunteers; the check is the *protocol* — that the agent
+committed before the human's answer existed — which the page proves exactly;
+the state is an accumulating portrait a fresh chat cannot reconstruct; and the
+human judges every match, with no tool that can.
 
 The fourth row is the reason for this project. Every prior build in this
 repository made the human an authority who confirms; this one makes the human a
@@ -180,13 +197,18 @@ Vanilla ES modules. Zero dependencies, no build step, no framework — same
 discipline and the same reason: nothing about the result should be attributable
 to a toolchain.
 
-    src/world.js     pure rules: tiles, bodies, holds, win. state + action -> state
-    src/levels.js    the four levels as ASCII maps
-    src/tools.js     the surface, built per tier. No DOM.
-    src/manual.js    what each tier hands the agent
-    src/progress.js  cleared levels and unlocked tier
-    src/webmcp.js    entry-point detection and registration
-    src/ui/          the only place that touches the DOM
+    src/webmcp.js         detection, registration, re-registration on unlock
+    src/progress.js       cleared stages and unlocked tier, per game
+    src/log.js            the event journey, every entry tagged by actor
+    src/registry.js       games register { id, title, tools, manual, reduce, render }
+    src/ui/               the only place that touches the DOM
+
+    src/games/mirror/     the first game — see its own spec
+    src/games/warren/     world.js, levels.js, tools.js, manual.js, render.js
+
+The spine is the top block and knows nothing about dungeons or questions. A game
+supplies a reducer, a tool surface per tier, a manual per tier, and a pure
+renderer.
 
 **Games are data.** The spine — world engine, renderer, tool swap, event log,
 progress — renders any game that supplies levels, tiles and verbs. Keel's
@@ -227,7 +249,12 @@ demo, it is a hope.*
 
 ## 9. Cut order, if time runs short
 
-1. **Cut nothing.** Levels 1–2 plus the engine and the stub agent are the claim.
+0. **Cut Warren entirely.** Mirror plus the spine makes the whole architectural
+   claim; Warren makes the *platform* claim. If only one game ships, the platform
+   spec becomes a promise rather than a demonstration — say so out loud rather
+   than shipping the word "platform" unearned.
+1. **Cut nothing further.** Levels 1–2 plus the engine and the stub agent are the
+   claim.
 2. Cut level 4 (The Vault) — it combines rather than teaches.
 3. Cut symmetric sight (§4) — the board simply renders whole. It is atmosphere,
    nothing rests on it, and it is one predicate and one test to remove.
