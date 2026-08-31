@@ -118,13 +118,21 @@ When off, `humanTarget` is `null` and:
 
 - `human_submit` is refused: *refused: this round is your agent's alone — you
   chose not to answer about it.*
-- the reveal gate becomes **agent committed, and human committed or excused**,
-  so the round runs `posed → agent_committed → ready → revealed → judged` with
-  the agent's commit landing straight on `ready`.
+- the reveal gate becomes **`both_committed`, or `agent_committed` while
+  excused**. The excusal lives in the *gate*, not in a state.
 
-The v1 state `both_committed` is **renamed `ready`**. Under the opt-out "both"
-would be a lie, and a state name that is only true in the default configuration
-is a state name that will mislead whoever reads the log next.
+**The v1 state names are unchanged.** An earlier draft of this spec renamed
+`both_committed` to `ready`; planning found the rename both unnecessary and
+worse. Putting the excusal in the gate keeps `both_committed` literally
+accurate, and it fixes a deadlock the other design would have shipped: toggling
+the opt-out *after* the agent has committed leaves the round in
+`agent_committed` with no legal move, because `human_submit` is now refused and
+a reveal that required `ready` could never be reached.
+
+`answerAboutAgent` is therefore the **single source of truth** for the excusal.
+Rounds always store their nominal `humanTarget`; `isExcused(doc)` derives, and
+`projectForAgent` reports `humanTarget: null` when excused. Storing the null in
+the round as well would be a second source that can drift from the first.
 
 There is no tool to set it. It is a page control, like every other decision.
 
@@ -201,8 +209,6 @@ Honest inventory, since v1 is built and green:
   `secrecy.test.js`, `dossier.test.js`, `journey.test.js`.
 - `subjectLabels(subject)` becomes `labelFor({ who, target, mode })`.
 - `dossier.js` groups by target rather than subject.
-- The state `both_committed` is renamed `ready` wherever it appears, including
-  the renderer's `data-state` attribute and its CSS hook.
 - `manual.js` gains the wait loop and a mode-specific section.
 - `questions.js` gains a second bank and a per-mode seed order.
 - `index.html` gains a start screen (mode picker, opt-out) and a finished view.
