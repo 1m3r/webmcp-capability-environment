@@ -4,9 +4,27 @@
    is only returned and never logged is invisible in the run record, and the run
    record is the evidence. */
 
-import { BANK, SEED_ORDER, ROUND_COUNT, subjectFor } from './questions.js';
+import { roundPlan, ROUND_COUNT } from './questions.js';
 
 export const DOSSIER_ROUND = 4;
+
+export const VERDICTS = {
+  portrait: ['landed', 'missed'],
+  quiz: ['match', 'miss']
+};
+
+/* answerAboutAgent is the single source of truth for the excusal. Rounds keep
+   their nominal humanTarget; everything else derives from here, so the two can
+   never disagree. */
+export function isExcused(doc) {
+  return doc.mode === 'portrait' && doc.answerAboutAgent === false;
+}
+
+/* The human has answered, or was never going to. */
+export function readyToReveal(doc, round) {
+  return round.state === 'both_committed'
+    || (round.state === 'agent_committed' && isExcused(doc));
+}
 
 const ACTOR = {
   agent_submit: 'agent',
@@ -19,16 +37,16 @@ const ACTOR = {
   grant_tier: 'human'
 };
 
-export function createDoc(now = 0) {
+export function createDoc(now = 0, { mode = 'portrait', answerAboutAgent = true } = {}) {
   return {
     version: 1,
     gameId: 'mirror',
+    mode,
+    answerAboutAgent,
     tier: 1,
     roundIndex: 0,
-    rounds: SEED_ORDER.slice(0, ROUND_COUNT).map((bankIndex, i) => ({
-      questionId: BANK[bankIndex].id,
-      question: BANK[bankIndex].text,
-      subject: subjectFor(i),
+    rounds: roundPlan(mode).map((planned) => ({
+      ...planned,
       state: 'posed',
       agentAnswer: null,
       humanAnswer: null,
@@ -116,23 +134,25 @@ export function reduce(doc, action, now = 0) {
       return accept({}, answer);
 
     case 'reveal':
-      if (round.state !== 'both_committed') {
+      if (!readyToReveal(doc, round)) {
         return refuse('NOT_BOTH_COMMITTED',
           'refused: both answers must be committed before a reveal — that is what makes the reveal mean anything.');
       }
       return accept(patchRound({ state: 'revealed' }), `round ${n} revealed`);
 
-    case 'judge':
+    case 'judge': {
       if (round.state !== 'revealed') {
         return refuse('NOT_REVEALED',
           'refused: a round is judged after it is revealed, and this one has not been revealed yet.');
       }
-      if (action.verdict !== 'match' && action.verdict !== 'miss') {
+      const allowed = VERDICTS[doc.mode];
+      if (!allowed.includes(action.verdict)) {
         return refuse('BAD_VERDICT',
-          'refused: a verdict is either match or miss, and nothing else was offered.');
+          `refused: in this mode a verdict is ${allowed[0]} or ${allowed[1]}, and nothing else was offered.`);
       }
       return accept(patchRound({ state: 'judged', verdict: action.verdict }),
         `round ${n} judged ${action.verdict}`);
+    }
 
     case 'next':
       if (round.state !== 'judged') {
@@ -173,13 +193,18 @@ export function reduce(doc, action, now = 0) {
 export function projectForAgent(doc) {
   const round = doc.rounds[doc.roundIndex];
   const revealed = round.state === 'revealed' || round.state === 'judged';
+  const excused = isExcused(doc);
   const base = {
     version: doc.version,
     round: doc.roundIndex + 1,
     of: doc.rounds.length,
+    mode: doc.mode,
     question: round.question,
-    subject: round.subject,
-    askedAbout: round.subject === 'human' ? 'your teammate' : 'you',
+    youAnswerAbout: round.agentTarget === 'human' ? 'your teammate' : 'yourself',
+    teammateAnswersAbout: excused ? null : (round.humanTarget === 'agent' ? 'you' : 'themselves'),
+    ...(doc.mode === 'quiz'
+      ? { yourRole: round.agentTarget === 'agent' ? 'you know the answer' : 'you are guessing' }
+      : {}),
     state: round.state,
     youHaveAnswered: round.agentAnswer !== null,
     teammateHasAnswered: round.humanAnswer !== null,

@@ -11,7 +11,7 @@ function playRounds(count, answers = (i) => ({ agent: `agent${i}`, human: `human
     doc = reduce(doc, { type: 'agent_submit', text: a.agent }).doc;
     doc = reduce(doc, { type: 'human_submit', text: a.human }).doc;
     doc = reduce(doc, { type: 'reveal' }).doc;
-    doc = reduce(doc, { type: 'judge', verdict: i % 2 === 0 ? 'match' : 'miss' }).doc;
+    doc = reduce(doc, { type: 'judge', verdict: i % 2 === 0 ? 'landed' : 'missed' }).doc;
     doc = reduce(doc, { type: 'next' }).doc;
   }
   return doc;
@@ -30,14 +30,21 @@ test('the dossier carries every judged round, both columns and the verdict', () 
     assert.ok(text.includes(`agent${i}`), `round ${i} agent answer missing`);
     assert.ok(text.includes(`human${i}`), `round ${i} human answer missing`);
   }
-  assert.match(text, /match/);
-  assert.match(text, /miss/);
+  assert.match(text, /landed/);
+  assert.match(text, /missed/);
 });
 
 test('the dossier separates what was learned about each side', () => {
   const text = buildDossier(playRounds(4));
   assert.match(text, /About your teammate/i);
   assert.match(text, /About you/i);
+});
+
+test('in portrait, each round files the agent read under the human and vice versa', () => {
+  const text = buildDossier(playRounds(2));
+  const teammate = text.slice(text.indexOf('About your teammate'), text.indexOf('About you (the agent)'));
+  assert.ok(teammate.includes('agent0'), "the agent's read of the human belongs under the human");
+  assert.ok(!teammate.includes('human0'), "the human's read of the agent does not");
 });
 
 test('the dossier reports the running match rate', () => {

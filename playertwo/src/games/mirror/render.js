@@ -4,16 +4,21 @@
    test assert on the rendered output in Node. If this module ever reaches for
    `document`, the game's central promise stops being testable. */
 
+import { isExcused, readyToReveal } from './game.js';
+
 const ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 
 export function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ESCAPES[c]);
 }
 
-export function subjectLabels(subject) {
-  return subject === 'human'
-    ? { human: 'You, about yourself', agent: 'Your agent, about you' }
-    : { human: 'You, about your agent', agent: 'Your agent, about itself' };
+export function labelFor(who, target, mode) {
+  const base = who === 'agent'
+    ? (target === 'human' ? 'Your agent, about you' : 'Your agent, about itself')
+    : (target === 'agent' ? 'You, about your agent' : 'You, about yourself');
+  if (mode !== 'quiz') return base;
+  const knows = (who === 'agent' && target === 'agent') || (who === 'human' && target === 'human');
+  return `${base} — ${knows ? 'the truth' : 'guessing'}`;
 }
 
 function answerCard(who, label, state, answer, revealed) {
@@ -31,11 +36,12 @@ function answerCard(who, label, state, answer, revealed) {
 export function renderRound(doc) {
   const round = doc.rounds[doc.roundIndex];
   const revealed = round.state === 'revealed' || round.state === 'judged';
-  const labels = subjectLabels(round.subject);
-  const canAnswer = round.state === 'agent_committed';
+  const agentLabel = labelFor('agent', round.agentTarget, doc.mode);
+  const humanLabel = labelFor('human', round.humanTarget, doc.mode);
+  const canAnswer = round.state === 'agent_committed' && !isExcused(doc);
 
   const controls = [];
-  if (round.state === 'both_committed') {
+  if (readyToReveal(doc, round)) {
     controls.push('<button type="button" data-action="reveal">Reveal</button>');
   }
   if (round.state === 'revealed') {
@@ -50,16 +56,16 @@ export function renderRound(doc) {
     <header class="round__head">
       <p class="round__count">Round ${doc.roundIndex + 1} of ${doc.rounds.length}</p>
       <h2 class="round__question">${escapeHtml(round.question)}</h2>
-      <p class="round__subject">about ${round.subject === 'human' ? 'you' : 'your agent'}</p>
+      <p class="round__subject">${escapeHtml(agentLabel.toLowerCase())}</p>
     </header>
 
     <div class="round__cards">
-      ${answerCard('agent', labels.agent, round.state, round.agentAnswer, revealed)}
-      ${answerCard('human', labels.human, round.state, round.humanAnswer, revealed)}
+      ${answerCard('agent', agentLabel, round.state, round.agentAnswer, revealed)}
+      ${answerCard('human', humanLabel, round.state, round.humanAnswer, revealed)}
     </div>
 
     <form class="round__form" data-action="human_submit">
-      <label for="human-answer">${escapeHtml(labels.human)}</label>
+      <label for="human-answer">${escapeHtml(humanLabel)}</label>
       <input id="human-answer" name="answer" type="text" autocomplete="off"
              placeholder="${canAnswer ? 'your answer' : 'your agent answers first'}"
              ${canAnswer ? '' : 'disabled'}>
@@ -77,12 +83,12 @@ export function renderPortrait(doc) {
 
   for (const [i, round] of doc.rounds.entries()) {
     if (round.state !== 'judged' && round.state !== 'revealed') continue;
-    const labels = subjectLabels(round.subject);
+    const agentLabel = labelFor('agent', round.agentTarget, doc.mode);
+    const humanLabel = labelFor('human', round.humanTarget, doc.mode);
     lines.push(`## ${i + 1}. ${round.question}`);
-    lines.push(`*about ${round.subject === 'human' ? 'the human' : 'the agent'}*`);
     lines.push('');
-    lines.push(`- **${labels.human}** — ${round.humanAnswer}`);
-    lines.push(`- **${labels.agent}** — ${round.agentAnswer}`);
+    lines.push(`- **${agentLabel}** — ${round.agentAnswer}`);
+    if (round.humanAnswer !== null) lines.push(`- **${humanLabel}** — ${round.humanAnswer}`);
     if (round.verdict) lines.push(`- verdict: **${round.verdict}**`);
     lines.push('');
   }

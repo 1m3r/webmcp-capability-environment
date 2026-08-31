@@ -9,7 +9,7 @@ function playedDoc() {
   doc = reduce(doc, { type: 'agent_submit', text: 'a lighthouse' }).doc;
   doc = reduce(doc, { type: 'human_submit', text: 'a harbour' }).doc;
   doc = reduce(doc, { type: 'reveal' }).doc;
-  return reduce(doc, { type: 'judge', verdict: 'miss' }).doc;
+  return reduce(doc, { type: 'judge', verdict: 'missed' }).doc;
 }
 
 test('the export is three files', () => {
@@ -28,7 +28,7 @@ test('the portrait sets both columns side by side', () => {
   const md = buildExport(playedDoc(), renderPortrait, 'x')[1].body;
   assert.match(md, /a lighthouse/);
   assert.match(md, /a harbour/);
-  assert.match(md, /miss/);
+  assert.match(md, /missed/);
 });
 
 test('the journey carries every entry with its actor, so a run is reconstructable', () => {
