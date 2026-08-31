@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="design-system/tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <header class="bar">
+    <h1>Keel</h1>
+    <div class="status" id="status">detecting…</div>
+  </header>
+
+  <nav class="rail" id="rail" aria-label="journey"></nav>
+
+  <main class="work">
+    <section class="guide" id="guide" aria-label="phase guide"></section>
+    <section class="canvas" id="canvas" aria-label="workspace"></section>
+  </main>
+
+  <aside class="side">
+    <section class="gate" id="gate" aria-label="gate"></section>
+    <section class="log" id="log" aria-label="event log"></section>
+    <div class="acts">
+      <button id="btn-export" type="button">Export</button>
+      <button id="btn-ready" type="button" disabled>READY</button>
+    </div>
+  </aside>
+
+  <input type="file" id="file" accept=".md,.txt,.json" hidden>
+  <script type="module" src="src/ui/shell.js"></script>
+</body>
+</html>

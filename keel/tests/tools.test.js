@@ -166,3 +166,14 @@ test('the global tools work in every phase', async () => {
   const out = textOf(await call(intakeTools, 'get_state', {}));
   assert.match(out, /"phase": "ship"/);
 });
+
+test('a refusal is recorded in the event log, not merely returned', async () => {
+  const c = ctx();
+  await call(buildTools('intake', c), 'request_advance', {});
+  const refusal = c.store.get().events.find((e) => e.kind === 'request_advance_refused');
+  assert.ok(refusal, 'a refused advance must leave a trace — the human watches the gate bite');
+  assert.equal(refusal.actor, 'gate');
+  assert.match(refusal.detail, /concept_loaded/);
+  assert.equal(c.store.get().phase, 'intake');
+  assert.equal(c.store.get().pendingAdvance, null);
+});

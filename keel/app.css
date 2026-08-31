@@ -1,0 +1,172 @@
+/* Drydock. Tokens only — no literal colours below this line. */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-text);
+  font-size: var(--step-0);
+  line-height: 1.55;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 22rem;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-areas: 'bar bar' 'rail rail' 'work side';
+  height: 100vh;
+  overflow: hidden;
+}
+
+h1, h2, h3, .step .t { font-family: var(--font-display); font-weight: 700; letter-spacing: 0.02em; }
+
+/* ---- bar --------------------------------------------------------------- */
+
+.bar {
+  grid-area: bar;
+  display: flex; align-items: baseline; gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--rule);
+}
+.bar h1 { margin: 0; font-size: var(--step-2); text-transform: uppercase; }
+.status { display: flex; gap: var(--space-3); color: var(--ink-2); font-size: var(--step--1); flex-wrap: wrap; }
+.status .bad { color: var(--fail); }
+
+/* ---- rail: the journey ------------------------------------------------- */
+
+.rail {
+  grid-area: rail;
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+  border-bottom: 1px solid var(--rule);
+}
+.step {
+  display: flex; align-items: baseline; gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-right: 1px solid var(--rule);
+  color: var(--ink-2);
+  font-size: var(--step--1);
+}
+.step:last-child { border-right: 0; }
+.step .n { color: var(--rule); font-variant-numeric: tabular-nums; }
+.step.here { background: var(--ground-2); color: var(--ink); box-shadow: inset 0 2px 0 var(--accent); }
+.step.here .n { color: var(--accent); }
+.step.open .n { color: var(--pass); }
+.step.shut { opacity: 0.55; }
+
+/* ---- work -------------------------------------------------------------- */
+
+.work {
+  grid-area: work;
+  display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 3fr);
+  min-height: 0;
+}
+.guide, .canvas, .side { overflow-y: auto; min-height: 0; }
+.guide { padding: var(--space-4); border-right: 1px solid var(--rule); }
+.guide-text { font-size: var(--step--1); color: var(--ink-2); max-width: 62ch; }
+.guide-text p { margin: 0 0 var(--space-3); }
+.guide-text pre { margin: 0 0 var(--space-3); white-space: pre-wrap; overflow-x: auto; color: var(--ink-2); }
+.chip {
+  display: inline-block; font-size: 0.85em; padding: 0 var(--space-1);
+  border: 1px solid var(--rule); border-radius: var(--radius);
+  color: var(--accent); white-space: nowrap;
+}
+.canvas { padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+
+/* ---- cards: where the human acts --------------------------------------- */
+
+.card {
+  background: var(--ground-2);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--rule);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+}
+.card h3 { margin: 0 0 var(--space-2); font-size: var(--step-1); }
+.card p { margin: 0 0 var(--space-2); }
+.card pre { margin: 0; white-space: pre-wrap; font-size: var(--step--1); color: var(--ink-2); overflow-x: auto; }
+.card .why { color: var(--ink-2); font-size: var(--step--1); }
+
+/* amber is anything waiting on the human, cyan is the agent's own marks */
+.card.ask, .card.decide, .card.pending { border-left-color: var(--pending); }
+.card.done { border-left-color: var(--pass); opacity: 0.75; }
+.card.concept { border-left-color: var(--accent); }
+.card.finding.major, .card.finding.blocking { border-left-color: var(--fail); }
+.card.finding.minor { border-left-color: var(--ink-2); }
+
+.drop {
+  border: 1px dashed var(--rule); border-radius: var(--radius);
+  padding: var(--space-5); text-align: center; color: var(--ink-2);
+}
+.fine { font-size: var(--step--1); opacity: 0.8; }
+
+/* ---- controls ---------------------------------------------------------- */
+
+button {
+  font: inherit; font-size: var(--step--1);
+  background: var(--ground-3); color: var(--ink);
+  border: 1px solid var(--rule); border-radius: var(--radius);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  transition: transform 120ms var(--ease), opacity 120ms var(--ease);
+}
+button:hover { transform: translateY(-1px); }
+button:active { transform: translateY(0); }
+button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.opt { margin: 0 var(--space-2) var(--space-2) 0; }
+.opt.wide { display: block; width: 100%; text-align: left; margin-right: 0; }
+.opt.wide b { display: block; }
+.opt.wide span { display: block; color: var(--ink-2); font-size: var(--step--1); }
+.opt.wide em { color: var(--pending); font-style: normal; font-size: var(--step--1); }
+.ghost { background: transparent; color: var(--ink-2); }
+
+form[data-answer-form] { display: flex; gap: var(--space-2); margin: var(--space-2) 0; }
+form[data-answer-form] input {
+  flex: 1; min-width: 0; font: inherit; font-size: var(--step--1);
+  background: var(--ground); color: var(--ink);
+  border: 1px solid var(--rule); border-radius: var(--radius);
+  padding: var(--space-2);
+}
+
+/* ---- side: gate and log ------------------------------------------------ */
+
+.side { grid-area: side; border-left: 1px solid var(--rule); display: flex; flex-direction: column; }
+.gate { padding: var(--space-4); border-bottom: 1px solid var(--rule); }
+.gate h2 { margin: 0 0 var(--space-3); font-size: var(--step-1); text-transform: uppercase; }
+.gate h2.open { color: var(--pass); }
+.gate h2.shut { color: var(--fail); }
+.check { font-size: var(--step--1); margin-bottom: var(--space-2); }
+.check.pass b { color: var(--pass); }
+.check.fail b { color: var(--fail); }
+.check ul { margin: var(--space-1) 0 0; padding-left: var(--space-4); color: var(--ink-2); }
+
+/* THE signature interaction: the refusal. One sharp displacement, no bounce,
+   nothing else on this page moves on its own. */
+@keyframes refused {
+  0%   { transform: translateX(0); }
+  15%  { transform: translateX(-6px); }
+  40%  { transform: translateX(4px); }
+  70%  { transform: translateX(-2px); }
+  100% { transform: translateX(0); }
+}
+.gate.refused { animation: refused 380ms var(--ease); }
+
+.log { flex: 1; padding: var(--space-4); overflow-y: auto; min-height: 0; font-size: var(--step--1); }
+.ev { border-left: 2px solid var(--rule); padding-left: var(--space-2); margin-bottom: var(--space-2); }
+.ev .who { color: var(--ink-2); }
+.ev .v { color: var(--rule); float: right; font-variant-numeric: tabular-nums; }
+.ev-agent { border-left-color: var(--accent); }
+.ev-human { border-left-color: var(--pending); }
+.ev-gate  { border-left-color: var(--fail); }
+.ev .detail { color: var(--ink-2); word-break: break-word; }
+.empty { color: var(--ink-2); }
+
+.acts { display: flex; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--rule); }
+#btn-ready { background: var(--pass); color: var(--ground); border-color: var(--pass); font-weight: 500; }
+#btn-ready:disabled { background: var(--ground-3); color: var(--ink); border-color: var(--rule); }
+
+@media (max-width: 60rem) {
+  body { grid-template-columns: 1fr; grid-template-areas: 'bar' 'rail' 'work' 'side'; height: auto; overflow: auto; }
+  .work { grid-template-columns: 1fr; }
+  .guide { border-right: 0; border-bottom: 1px solid var(--rule); }
+}

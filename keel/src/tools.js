@@ -98,6 +98,13 @@ export const TOOL_DEFS = {
       const doc = ctx.store.get();
       const gate = gateFor(doc, doc.phase);
       if (!gate.ok) {
+        /* A refusal is the most informative thing that happens on this page, so
+           it is recorded rather than merely returned. The human watches the
+           gate bite; the export carries every time it did. */
+        ctx.store.mutate(
+          { actor: 'gate', kind: 'request_advance_refused',
+            detail: doc.phase + ': ' + gate.failed.map((f) => f.id).join(', '), touched: [] },
+          () => {});
         return 'The gate for phase "' + doc.phase + '" is not open. Nothing has moved.\n\n' +
           describeGate(gate) + '\n\nFix these, then ask again.';
       }
