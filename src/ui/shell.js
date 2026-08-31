@@ -6,12 +6,14 @@ import { register, get } from '../registry.js';
 import { mirror } from '../games/mirror/index.js';
 import { buildExport } from '../exporter.js';
 import { detect, registerTools, reregister } from '../webmcp.js';
+import { createWaitRegistry } from '../waiters.js';
 
 register(mirror);
 const game = get('mirror');
 
 const el = (id) => document.getElementById(id);
 const stage = el('stage');
+const waits = createWaitRegistry();
 
 let doc = load();
 let found = null;
@@ -41,9 +43,11 @@ const ctx = {
     doc = next;
     save();
     render();
+    waits.notify(doc.version);
     if (doc.tier !== tierBefore) syncTools();
   },
-  now: () => Date.now()
+  now: () => Date.now(),
+  waits
 };
 
 function dispatch(action) {
@@ -162,5 +166,8 @@ async function boot() {
   console.log(`[mirror] ${registration.registered} tools via ${registration.method} on ${found.entry}`);
   if (registration.errors.length) console.warn('[mirror]', registration.errors);
 }
+
+/* A waiter left pending across a teardown is an agent stuck until its timeout. */
+addEventListener('pagehide', () => waits.dispose());
 
 boot();

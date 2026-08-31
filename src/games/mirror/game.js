@@ -174,6 +174,7 @@ export function projectForAgent(doc) {
   const round = doc.rounds[doc.roundIndex];
   const revealed = round.state === 'revealed' || round.state === 'judged';
   const base = {
+    version: doc.version,
     round: doc.roundIndex + 1,
     of: doc.rounds.length,
     question: round.question,
