@@ -4,7 +4,8 @@
    test assert on the rendered output in Node. If this module ever reaches for
    `document`, the game's central promise stops being testable. */
 
-import { isExcused, readyToReveal } from './game.js';
+import { isExcused, readyToReveal, isComplete } from './game.js';
+import { QUIZ_PASS } from './questions.js';
 
 const ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 
@@ -95,4 +96,70 @@ export function renderPortrait(doc) {
 
   lines.push('---', '', `${matched} of ${done.length} judged a match.`, '');
   return lines.join('\n');
+}
+
+export function renderStart() {
+  return `<section class="start">
+    <h2 class="start__title">Two ways to play</h2>
+
+    <div class="start__modes">
+      <button type="button" class="start__mode" data-mode="portrait">
+        <strong>Portrait</strong>
+        <span>You each answer about the other. Nothing here has a right answer —
+        the point is the gap between how you see each other.</span>
+      </button>
+      <button type="button" class="start__mode" data-mode="quiz">
+        <strong>Quiz</strong>
+        <span>Real questions with real answers. One of you knows, the other guesses.
+        Match ${QUIZ_PASS} of 8 to pass.</span>
+      </button>
+    </div>
+
+    <label class="start__opt">
+      <input type="checkbox" id="opt-about-agent" checked>
+      In Portrait, I want to answer about my agent too
+    </label>
+    <p class="start__note">Uncheck it and only your agent answers, and you read what it made of you.</p>
+  </section>`;
+}
+
+export function renderResults(doc) {
+  const judged = doc.rounds.filter((r) => r.state === 'judged');
+  const good = doc.mode === 'quiz' ? 'match' : 'landed';
+  const hits = judged.filter((r) => r.verdict === good).length;
+
+  const headline = doc.mode === 'quiz'
+    ? `<p class="results__verdict ${hits >= QUIZ_PASS ? 'is-pass' : 'is-fail'}">${
+        hits >= QUIZ_PASS ? 'PASSED' : 'NOT PASSED'}</p>
+       <p class="results__rate">${hits} of ${judged.length} matched — ${QUIZ_PASS} needed</p>`
+    : `<p class="results__rate">${hits} of ${judged.length} landed</p>`;
+
+  const rows = doc.rounds.map((round, i) => {
+    if (round.state !== 'judged') return '';
+    const agentLabel = labelFor('agent', round.agentTarget, doc.mode);
+    const humanLabel = labelFor('human', round.humanTarget, doc.mode);
+    const human = round.humanAnswer === null
+      ? ''
+      : `<p class="results__answer"><span>${escapeHtml(humanLabel)}</span>${escapeHtml(round.humanAnswer)}</p>`;
+    return `<article class="results__round" data-verdict="${round.verdict}">
+      <h3>${i + 1}. ${escapeHtml(round.question)}</h3>
+      <p class="results__answer"><span>${escapeHtml(agentLabel)}</span>${escapeHtml(round.agentAnswer)}</p>
+      ${human}
+      <p class="results__mark">${round.verdict}</p>
+    </article>`;
+  }).join('\n');
+
+  return `<section class="results">
+    <header class="results__head">
+      <h2 class="results__title">${doc.mode === 'quiz' ? 'How well you know each other' : 'How you saw each other'}</h2>
+      ${headline}
+    </header>
+    ${rows}
+    <p class="results__note">Press Export to keep this.</p>
+  </section>`;
+}
+
+/* The shell asks for one thing and gets whichever screen is current. */
+export function renderGame(doc) {
+  return isComplete(doc) ? renderResults(doc) : renderRound(doc);
 }

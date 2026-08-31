@@ -1,5 +1,5 @@
 import { createDoc, reduce, isComplete, DOSSIER_ROUND } from './game.js';
-import { renderRound, renderPortrait } from './render.js';
+import { renderGame, renderPortrait, renderStart } from './render.js';
 import { buildTools } from './tools.js';
 
 export const mirror = {
@@ -10,7 +10,8 @@ export const mirror = {
   reduce,
   isComplete,
   buildTools,
-  render: renderRound,
+  render: renderGame,
+  renderStart,
   renderPortrait,
   exportBase: 'mirror',
   /* The only thing the shell needs to know about this game's unlock. */
