@@ -3,7 +3,37 @@
 Can a web page, through WebMCP alone, give a user's existing general-purpose
 agent a capability it did not arrive with — no install, no configuration?
 
-## Where the project is
+## Player Two — the application
+
+**[playertwo/](playertwo/)** is a platform of games in which your agent is the
+second player. The page defines a world, hands the agent a body inside it
+through WebMCP tool registration and nothing else, and the two of you play on
+one screen. Clearing stages is what releases new method and new verbs to it —
+and your click is what grants them.
+
+The first game, **Mirror**, asks one question per round about a subject that
+alternates between the two of you. Both answer in the dark; the reveal sets the
+answers side by side.
+
+Secrecy rests on **order, not rendering**. A browser-driving agent reads the
+DOM, so "hidden until the reveal" cannot be a property of where the answer is
+drawn. The agent commits first, every round, into a tool with no verb to edit or
+retract; the page refuses your input until it has. At the moment it could look,
+there is nothing to look at.
+
+    node playertwo/server.mjs              ->  http://localhost:5179
+    node --test 'playertwo/tests/*.test.js'
+
+Platform spec: [docs/superpowers/specs/2026-08-31-player-two-design.md](docs/superpowers/specs/2026-08-31-player-two-design.md) ·
+game spec: [docs/superpowers/specs/2026-08-31-mirror-design.md](docs/superpowers/specs/2026-08-31-mirror-design.md) ·
+run protocol: [docs/MIRROR-RUNBOOK.md](docs/MIRROR-RUNBOOK.md) ·
+pre-registration: [docs/MIRROR-PREREGISTRATION.md](docs/MIRROR-PREREGISTRATION.md)
+
+A second game, **Warren** — two avatars in one dungeon, where the asymmetry is
+that one body cannot be in two places — is specified in the platform spec and
+not yet built.
+
+## Where the probe is
 
 **Level 0 — Transfer Probe: PASSED.** A page holding one arbitrary rule behind
 a WebMCP tool changed what a fresh ChatGPT agent produced. Control produced 1 of
