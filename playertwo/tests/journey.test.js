@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createDoc, reduce, isComplete, DOSSIER_ROUND } from '../src/games/mirror/game.js';
 import { buildTools } from '../src/games/mirror/tools.js';
+import { createWaitRegistry } from '../src/waiters.js';
 
 /* A stub agent. It knows only what the tools tell it: it reads the manual once,
    reads the round, answers, and reads the dossier when the dossier appears.
@@ -33,7 +34,13 @@ function stubAgent(ctx) {
 
 test('the stub agent plays all eight rounds and the game closes', async () => {
   const box = { doc: createDoc() };
-  const ctx = { getDoc: () => box.doc, setDoc: (d) => { box.doc = d; }, now: () => 0 };
+  const waits = createWaitRegistry();
+  const ctx = {
+    getDoc: () => box.doc,
+    setDoc: (d) => { box.doc = d; waits.notify(d.version); },
+    now: () => 0,
+    waits
+  };
   const agent = stubAgent(ctx);
 
   const human = (action) => {
@@ -69,7 +76,13 @@ test('the stub agent plays all eight rounds and the game closes', async () => {
 
 test('across the whole journey the agent never moved the human', async () => {
   const box = { doc: createDoc() };
-  const ctx = { getDoc: () => box.doc, setDoc: (d) => { box.doc = d; }, now: () => 0 };
+  const waits = createWaitRegistry();
+  const ctx = {
+    getDoc: () => box.doc,
+    setDoc: (d) => { box.doc = d; waits.notify(d.version); },
+    now: () => 0,
+    waits
+  };
   const agent = stubAgent(ctx);
 
   await agent.playRound();

@@ -1,16 +1,19 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createDoc } from '../src/games/mirror/game.js';
+import { createDoc, reduce } from '../src/games/mirror/game.js';
+import { createWaitRegistry } from '../src/waiters.js';
 import { buildTools, TOOL_NAMES_BY_TIER } from '../src/games/mirror/tools.js';
 
 function harness(doc = createDoc()) {
   const box = { doc };
+  const waits = createWaitRegistry();
   const ctx = {
     getDoc: () => box.doc,
-    setDoc: (d) => { box.doc = d; },
-    now: () => 0
+    setDoc: (d) => { box.doc = d; waits.notify(d.version); },
+    now: () => 0,
+    waits
   };
-  return { box, ctx, tools: () => buildTools(ctx) };
+  return { box, ctx, waits, tools: () => buildTools(ctx) };
 }
 
 function byName(tools, name) {
@@ -109,4 +112,64 @@ test('there is no tool that reveals, judges, advances, or grants', () => {
   for (const forbidden of ['reveal', 'judge', 'next', 'next_round', 'grant_tier', 'unlock', 'answer_for_human']) {
     assert.ok(!names.includes(forbidden), `${forbidden} must never be a tool — it is the human's move`);
   }
+});
+
+const sig = () => ({ signal: new AbortController().signal });
+
+test('the projection carries the version, so the agent knows what to wait on', async () => {
+  const h = harness();
+  const out = JSON.parse(textOf(await byName(h.tools(), 'get_round').execute({}, sig())));
+  assert.equal(typeof out.version, 'number');
+});
+
+test('wait_for_game_update is declared read-only to the client', () => {
+  const tool = byName(harness().tools(), 'wait_for_game_update');
+  assert.equal(tool.annotations.readOnlyHint, true);
+});
+
+test('THE BUSY-LOOP TEST: waiting does not itself change the version', async () => {
+  const h = harness();
+  const before = h.box.doc.version;
+  const logBefore = h.box.doc.log.length;
+  const pending = byName(h.tools(), 'wait_for_game_update')
+    .execute({ since: before, timeout_ms: 1000 }, sig());
+  await new Promise((r) => setTimeout(r, 50));
+  assert.equal(h.box.doc.version, before, 'the wait bumped the version and would wake itself');
+  assert.equal(h.box.doc.log.length, logBefore, 'the wait wrote to the log');
+  const out = JSON.parse(textOf(await pending));
+  assert.equal(out.timedOut, true);
+});
+
+test('wait_for_game_update returns the new round when the human moves', async () => {
+  const h = harness();
+  await byName(h.tools(), 'submit_answer').execute({ text: 'first' }, sig());
+  const since = h.box.doc.version;
+  const pending = byName(h.tools(), 'wait_for_game_update').execute({ since }, sig());
+  h.ctx.setDoc(reduce(h.box.doc, { type: 'human_submit', text: 'mine' }).doc);
+  const out = JSON.parse(textOf(await pending));
+  assert.ok(out.version > since);
+  assert.equal(out.state, 'both_committed');
+});
+
+test('wait_for_game_update reports a restart rather than hanging', async () => {
+  const h = harness();
+  const out = JSON.parse(textOf(await byName(h.tools(), 'wait_for_game_update')
+    .execute({ since: 999 }, sig())));
+  assert.equal(out.reset, true);
+});
+
+test('wait_for_game_update refuses a missing since, naming the cause', async () => {
+  const h = harness();
+  const out = textOf(await byName(h.tools(), 'wait_for_game_update').execute({}, sig()));
+  assert.match(out, /^refused: /);
+  assert.match(out, /version/i);
+});
+
+test('every tool accepts the spec signature and survives a missing options object', async () => {
+  const h = harness();
+  for (const tool of h.tools()) {
+    assert.ok(tool.execute.length >= 1, `${tool.name} must accept the input object`);
+  }
+  const out = await byName(h.tools(), 'get_round').execute({});
+  assert.ok(textOf(out).length > 0, 'a client that omits options must not crash the tool');
 });
