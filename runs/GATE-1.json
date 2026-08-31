@@ -1,0 +1,213 @@
+{
+  "probe": "webmcp-house-control",
+  "probeVersion": "1.0.0",
+  "run": {
+    "runId": "c22cpw6k",
+    "mode": "gate",
+    "url": "http://localhost:5177/gate.html",
+    "startedAt": "2026-08-30T20:13:03.588Z",
+    "exportedAt": "2026-08-30T20:23:59.807Z",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+    "webmcp": {
+      "entryPoint": "document.modelContext",
+      "registrationMethod": "registerTool",
+      "toolsRegistered": 3,
+      "errors": []
+    }
+  },
+  "gate": {
+    "mode": "enforced",
+    "verbosity": "rule",
+    "ceiling": "ask",
+    "applied": 3,
+    "refused": 0,
+    "advisory": 0
+  },
+  "standard": {
+    "shipped": {
+      "gate": "enforced",
+      "verbosity": "rule",
+      "ceiling": "ask",
+      "rules": {
+        "spacing": {
+          "label": "Spacing scale",
+          "on": true,
+          "perm": "ask",
+          "value": [
+            7,
+            14,
+            21,
+            28,
+            35,
+            42,
+            49,
+            56,
+            63,
+            70,
+            84,
+            98
+          ]
+        },
+        "controls": {
+          "label": "Minimum control height",
+          "on": true,
+          "perm": "ask",
+          "value": 44
+        },
+        "gap": {
+          "label": "Action gap ratio",
+          "on": true,
+          "perm": "ask",
+          "value": [
+            2,
+            7
+          ]
+        },
+        "radius": {
+          "label": "Card radius offset",
+          "on": true,
+          "perm": "ask",
+          "value": -1
+        },
+        "colour": {
+          "label": "Palette",
+          "on": true,
+          "perm": "locked",
+          "value": [
+            "oklch(16% 0.018 50)",
+            "oklch(93% 0.026 78)",
+            "oklch(70% 0.18 48)"
+          ]
+        }
+      }
+    },
+    "amended": {
+      "rules": {
+        "spacing": {
+          "label": "Spacing scale",
+          "on": true,
+          "perm": "ask",
+          "value": [
+            7,
+            14,
+            21,
+            28,
+            35,
+            42,
+            49,
+            56,
+            63,
+            70,
+            84,
+            98
+          ]
+        },
+        "controls": {
+          "label": "Minimum control height",
+          "on": true,
+          "perm": "ask",
+          "value": 44
+        },
+        "gap": {
+          "label": "Action gap ratio",
+          "on": true,
+          "perm": "ask",
+          "value": [
+            2,
+            7
+          ]
+        },
+        "radius": {
+          "label": "Card radius offset",
+          "on": true,
+          "perm": "ask",
+          "value": -1
+        },
+        "colour": {
+          "label": "Palette",
+          "on": true,
+          "perm": "locked",
+          "value": [
+            "oklch(16% 0.018 50)",
+            "oklch(93% 0.026 78)",
+            "oklch(70% 0.18 48)"
+          ]
+        }
+      }
+    },
+    "wasAmended": false,
+    "derived": {
+      "scale": [
+        7,
+        14,
+        21,
+        28,
+        35,
+        42,
+        49,
+        56,
+        63,
+        70,
+        84,
+        98
+      ],
+      "min": 44,
+      "height": 49,
+      "gap": 14,
+      "radius": 13
+    },
+    "text": "HOUSE STANDARD\n\n  Margin, padding and gap use only: 7, 14, 21, 28, 35, 42, 49, 56, 63, 70, 84, 98.\n\n  Interactive controls are at least 44px tall. Control heights come from the spacing scale. Use the smallest height that satisfies both.\n\n  The gap between the primary and secondary action is 2/7 of the primary action's height.\n\n  A card's corner radius is 1px less than the gap between the primary and secondary action.\n\n  Three colours are in use, and no others. Opacity may vary. This includes gradient stops: oklch(16% 0.018 50), oklch(93% 0.026 78), oklch(70% 0.18 48).\n\nThese are enforced when work is applied to this page.\n\nComposition, copy, imagery and motion are at the designer's discretion."
+  },
+  "requests": [],
+  "events": [
+    {
+      "seq": 1,
+      "kind": "human",
+      "title": "session started",
+      "body": "gate enforced · ceiling ask",
+      "data": null,
+      "at": "2026-08-30T20:13:03.591Z",
+      "clock": "22:13:03"
+    },
+    {
+      "seq": 2,
+      "kind": "human",
+      "title": "get_house_rules",
+      "body": "returned 702 chars",
+      "data": null,
+      "at": "2026-08-30T20:16:56.641Z",
+      "clock": "22:16:56"
+    },
+    {
+      "seq": 3,
+      "kind": "applied",
+      "title": "apply_layout",
+      "body": "2/2 ops · conforms · 37 elements",
+      "data": null,
+      "at": "2026-08-30T20:19:49.659Z",
+      "clock": "22:19:49"
+    },
+    {
+      "seq": 4,
+      "kind": "applied",
+      "title": "apply_layout",
+      "body": "1/1 ops · conforms · 38 elements",
+      "data": null,
+      "at": "2026-08-30T20:20:33.970Z",
+      "clock": "22:20:33"
+    },
+    {
+      "seq": 5,
+      "kind": "applied",
+      "title": "apply_layout",
+      "body": "1/1 ops · conforms · 39 elements",
+      "data": null,
+      "at": "2026-08-30T20:21:12.284Z",
+      "clock": "22:21:12"
+    }
+  ],
+  "canvas": {
+    "elementCount": 39,
+    "html": "<section class=\"coffee-stage\" aria-label=\"Coffee subscription pricing\"><article class=\"subscription-card\" data-pricing-card=\"\"><div class=\"card-topline\"><div class=\"roast-mark\" aria-hidden=\"true\"><svg viewBox=\"0 0 24 24\" role=\"img\"><path d=\"M18.8 3.7C14.9 1.5 9.2 3.2 6 7.3c-3.3 4.2-3 9.6.6 12.1 3.7 2.5 9.4.6 12.3-3.7 2.8-4.3 3.7-9.7-.1-12Zm-1.2 1.8c-1.1 2.7-2.8 4.3-5.1 5.8-2.1 1.4-3.6 3.2-4.3 5.8-1.8-1.8-1.6-5.3.7-8.2 2.3-3 6-4.5 8.7-3.4Z\"></path></svg></div><p class=\"eyebrow\">Morrow Coffee · Roast 02</p><span class=\"availability\">Ships weekly</span></div><div class=\"offer\"><p class=\"kicker\">House subscription</p><h1>Good coffee,<br><em>on repeat.</em></h1><p class=\"description\">A rotating single-origin roast, selected for sweetness and delivered at peak freshness.</p></div><div class=\"price-row\"><div class=\"price\"><span class=\"currency\">€</span><strong>24</strong><span class=\"cadence\">/ month</span></div><p class=\"bag-note\">2 × 250g bags<br>Cancel anytime</p></div><ul class=\"benefits\" aria-label=\"Subscription benefits\"><li><span>01</span><p>Roasted every Monday</p></li><li><span>02</span><p>Free tracked delivery</p></li><li><span>03</span><p>Brew guide in every box</p></li></ul><div class=\"actions\"><button class=\"action action-primary\" type=\"button\">Start subscription <span aria-hidden=\"true\">↗</span></button><button class=\"action action-secondary\" type=\"button\">View roast details</button></div><p class=\"fine-print\">Pause, skip, or cancel before your next roast day.</p></article></section><style>.coffee-stage{--ink:oklch(16% 0.018 50);--paper:oklch(93% 0.026 78);--ember:oklch(70% 0.18 48);--ease-reveal:cubic-bezier(.32,.72,0,1);--ease-hover:cubic-bezier(.22,1,.36,1);--ease-press:cubic-bezier(.2,.8,.2,1);--dur-micro:160ms;--dur-standard:260ms;--dur-reveal:700ms;box-sizing:border-box;container-name:coffee-card;container-type:inline-size;display:grid;place-items:center;min-height:100%;padding:42px;background:var(--paper);color:var(--paper);font-family:'Avenir Next','Helvetica Neue',sans-serif;overflow:clip}.coffee-stage *{box-sizing:border-box}.subscription-card{position:relative;width:min(100%,434px);padding:42px;border-radius:13px;background:var(--ink);box-shadow:0 28px 70px oklch(16% 0.018 50 / .28);overflow:hidden;isolation:isolate;animation:card-arrive var(--dur-reveal) var(--ease-reveal) both}.subscription-card:before{content:'';position:absolute;inset:14px;border:1px solid oklch(93% 0.026 78 / .14);border-radius:7px;pointer-events:none}.card-topline{display:grid;grid-template-columns:49px 1fr auto;align-items:center;gap:14px;padding-bottom:28px;border-bottom:1px solid oklch(93% 0.026 78 / .18)}.roast-mark{display:grid;place-items:center;width:49px;height:49px;border:1px solid var(--ember);border-radius:49px;color:var(--ember)}.roast-mark svg{width:21px;height:21px;fill:currentColor}.eyebrow,.availability,.kicker,.description,.bag-note,.benefits p,.fine-print{margin:0}.eyebrow,.availability,.kicker,.bag-note,.benefits,.fine-print{text-transform:uppercase;letter-spacing:.12em}.eyebrow{font-size:10px;font-weight:700}.availability{font-size:9px;color:var(--ember);text-align:right}.offer{display:grid;gap:21px;padding-block:42px 35px}.kicker{font-size:10px;color:var(--ember);font-weight:700}.offer h1{margin:0;max-width:350px;font-family:'Iowan Old Style','Palatino Linotype','Book Antiqua',Palatino,serif;font-size:clamp(46px,13cqi,68px);font-weight:400;line-height:.88;letter-spacing:-.045em;text-wrap:balance}.offer h1 em{color:var(--ember);font-weight:400}.description{max-width:315px;font-size:14px;line-height:1.55;color:oklch(93% 0.026 78 / .7);text-wrap:pretty}.price-row{display:flex;align-items:flex-end;justify-content:space-between;gap:21px;padding-block:28px;border-block:1px solid oklch(93% 0.026 78 / .18)}.price{display:flex;align-items:flex-start}.currency{padding-top:7px;font-size:14px;color:var(--ember)}.price strong{font-family:'Iowan Old Style','Palatino Linotype','Book Antiqua',Palatino,serif;font-size:63px;font-weight:400;line-height:.75;letter-spacing:-.05em}.cadence{align-self:flex-end;padding-left:7px;font-size:11px;color:oklch(93% 0.026 78 / .6)}.bag-note{font-size:9px;line-height:1.7;text-align:right;color:oklch(93% 0.026 78 / .62)}.benefits{display:grid;gap:0;margin:0;padding:21px 0 28px;list-style:none}.benefits li{display:grid;grid-template-columns:35px 1fr;align-items:center;gap:14px;min-height:42px;border-bottom:1px solid oklch(93% 0.026 78 / .1)}.benefits li:last-child{border-bottom:0}.benefits span{font-size:9px;color:var(--ember)}.benefits p{font-size:10px;font-weight:700}.actions{display:grid;gap:14px}.action{display:flex;align-items:center;justify-content:space-between;width:100%;height:49px;padding-inline:21px;border:1px solid var(--paper);border-radius:13px;font:700 11px/1 'Avenir Next','Helvetica Neue',sans-serif;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:transform var(--dur-micro) var(--ease-press),opacity var(--dur-standard) var(--ease-hover),background-color var(--dur-standard) var(--ease-hover),color var(--dur-micro) var(--ease-press)}.action-primary{border-color:var(--ember);background:var(--ember);color:var(--ink)}.action-secondary{justify-content:center;background:oklch(16% 0.018 50 / 0);color:var(--paper)}.action:focus-visible{outline:3px solid var(--ember);outline-offset:3px}.action:active{transform:translateY(1px) scale(.985)}.action:disabled,.action[aria-disabled='true']{cursor:not-allowed;opacity:.4}.fine-print{padding-top:21px;font-size:8px;line-height:1.5;text-align:center;color:oklch(93% 0.026 78 / .44)}@media (hover:hover){.action-primary:hover{transform:translateY(-2px);opacity:.9}.action-secondary:hover{transform:translateY(-2px);background:oklch(93% 0.026 78 / .08);color:var(--ember)}}@container coffee-card (max-width:480px){.coffee-stage{padding:21px}.subscription-card{padding:28px}.card-topline{grid-template-columns:42px 1fr}.roast-mark{width:42px;height:42px}.availability{display:none}.offer{padding-block:35px 28px}.offer h1{font-size:49px}.description{font-size:13px}.price strong{font-size:56px}}@keyframes card-arrive{from{opacity:0;transform:translateY(21px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}@media (prefers-reduced-motion:reduce){.coffee-stage *,.coffee-stage *::before,.coffee-stage *::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}</style><style>.subscription-card{width:min(100%,560px);display:grid;grid-template-columns:1fr 1fr;grid-template-areas:'top top' 'offer offer' 'price benefits' 'actions actions' 'fine fine';column-gap:28px;padding:28px}.card-topline{grid-area:top;padding-bottom:21px}.offer{grid-area:offer;gap:14px;padding-block:28px}.offer h1{max-width:490px;font-size:63px;line-height:.86}.description{max-width:420px}.price-row{grid-area:price;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:21px;padding-block:21px}.bag-note{text-align:left}.benefits{grid-area:benefits;padding:21px 0}.actions{grid-area:actions}.fine-print{grid-area:fine}@container coffee-card (max-width:480px){.subscription-card{display:grid;grid-template-columns:1fr;grid-template-areas:'top' 'offer' 'price' 'benefits' 'actions' 'fine';column-gap:0;padding:28px}.offer{padding-block:35px 28px}.offer h1{font-size:49px}.price-row{flex-direction:row;align-items:flex-end;justify-content:space-between}.bag-note{text-align:right}}</style><style>@container coffee-card (max-width:480px){.coffee-stage{padding:14px}.subscription-card{padding:21px}.subscription-card:before{inset:7px}.card-topline{grid-template-columns:35px 1fr;gap:14px;padding-bottom:14px}.roast-mark{width:35px;height:35px}.roast-mark svg{width:14px;height:14px}.eyebrow{font-size:9px;line-height:1.45}.offer{gap:14px;padding-block:21px}.offer h1{font-size:42px;line-height:.9}.description{font-size:12px}.price-row{flex-direction:column;align-items:flex-start;gap:14px;padding-block:14px}.bag-note{text-align:left}.benefits{padding:14px 0}.benefits li{grid-template-columns:28px 1fr;gap:7px;min-height:35px}.benefits p{font-size:9px;line-height:1.4}.action{padding-inline:14px;font-size:10px}.fine-print{padding-top:14px;font-size:7px}}</style>"
+  }
+}

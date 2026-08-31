@@ -1,13 +1,31 @@
-HOUSE RULES
+HOUSE STANDARD
 
-Layout
+Spacing
+  Margin, padding and gap use only:
+    7, 14, 21, 28, 35, 42, 49, 56, 63, 70, 84, 98
 
-  All spacing values — margin, padding and gap — are multiples of 7px.
+Controls
+  Interactive controls are at least 44px tall.
+  Control heights come from the spacing scale.
+  Use the smallest height that satisfies both conditions.
 
-  The spacing scale is:
-    7, 14, 21, 28, 35, 42, 49, 56, 63, 70, 84, 98, 112
+  The gap between the primary and secondary action is two sevenths
+  of the primary action's height.
 
-  Values outside this scale are not used.
+Surfaces
+  A card's corner radius is one pixel less than the gap between the
+  primary and secondary action.
 
-That is the only layout rule in force. Colour, typography, imagery,
-copy and structure are at the designer's discretion.
+Colour
+  Three colours are in use, and no others. Opacity may vary.
+  This includes gradient stops.
+
+    oklch(16% 0.018 50)
+    oklch(93% 0.026 78)
+    oklch(70% 0.18 48)
+
+Type
+  Type sizes are fixed. Fluid type functions are not used.
+
+That is the standard. Composition, copy, imagery and motion are at the
+designer's discretion.

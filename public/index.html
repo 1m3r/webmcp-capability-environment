@@ -21,8 +21,8 @@
     --surface2: oklch(0.255 0.015 265);
     --line:     oklch(0.33 0.016 265);
     --text:     oklch(0.93 0.008 265);
-    --muted:    oklch(0.66 0.013 265);
-    --dim:      oklch(0.52 0.013 265);
+    --muted:    oklch(0.66 0.012 265);
+    --dim:      oklch(0.52 0.012 265);
     --good:     oklch(0.80 0.15 162);
     --flat:     oklch(0.70 0.10 55);
     --live:     oklch(0.78 0.16 250);
@@ -41,7 +41,7 @@
     background: var(--ink);
     color: var(--text);
     font-family: var(--sans);
-    font-size: 13px;
+    font-size: 11px;
     line-height: 1.45;
     -webkit-font-smoothing: antialiased;
   }
@@ -96,7 +96,7 @@
     top: 19px;
     display: flex;
     flex-direction: column;
-    gap: 13px;
+    gap: 11px;
     max-height: calc(100vh - 39px);
     overflow-y: auto;
     font-family: var(--mono);
@@ -107,7 +107,7 @@
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 5px;
-    padding: 13px;
+    padding: 11px;
   }
 
   .blk > h2 {
@@ -124,7 +124,7 @@
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    gap: 13px;
+    gap: 11px;
     padding: 3px 0;
     border-bottom: 1px dotted oklch(0.30 0.014 265);
   }
@@ -146,9 +146,9 @@
     background: var(--surface2);
     border: 1px solid var(--line);
     border-radius: 3px;
-    padding: 9px 13px;
+    padding: 9px 11px;
     cursor: pointer;
-    transition: background 130ms cubic-bezier(.2,.7,.3,1), border-color 130ms cubic-bezier(.2,.7,.3,1);
+    transition: background 110ms cubic-bezier(.2,.7,.3,1), border-color 110ms cubic-bezier(.2,.7,.3,1);
   }
   button:hover { background: oklch(0.31 0.017 265); border-color: oklch(0.43 0.02 265); }
   button:focus-visible { outline: 2px solid var(--live); outline-offset: 2px; }
@@ -190,7 +190,7 @@
   table { width: 100%; border-collapse: collapse; margin-top: 9px; }
   th, td { padding: 3px 5px; text-align: right; border-bottom: 1px dotted oklch(0.30 0.014 265); }
   th:first-child, td:first-child { text-align: left; }
-  th { color: var(--dim); font-weight: 500; font-size: 9px; letter-spacing: 0.13em; text-transform: uppercase; }
+  th { color: var(--dim); font-weight: 500; font-size: 9px; letter-spacing: 0.11em; text-transform: uppercase; }
   td.yes { color: var(--good); }
   td.no  { color: var(--dim); }
   td.wh  { color: var(--muted); font-size: 9px; text-align: left; }
@@ -200,7 +200,7 @@
     padding: 9px 11px;
     background: oklch(0.19 0.012 265);
     border-radius: 3px;
-    font-size: 13px;
+    font-size: 11px;
     line-height: 1.5;
     color: var(--text);
   }
@@ -252,19 +252,13 @@
       <div id="log"><div class="empty">no calls yet</div></div>
     </section>
 
-    <section class="blk">
-      <h2>Measurement</h2>
-      <div class="btnrow"><button id="btn-measure" class="primary">Measure</button></div>
-      <div id="mout"><div class="empty" style="margin-top:9px">not measured yet</div></div>
-    </section>
-
-    <section class="blk">
+    <section class="blk" id="blk-export">
       <h2>Export</h2>
       <div class="btnrow">
         <button id="btn-export">Download JSON</button>
         <button id="btn-copy">Copy JSON</button>
       </div>
-      <div id="exportnote" class="empty" style="margin-top:9px">tool calls + measurement + canvas html</div>
+      <div id="exportnote" class="empty" style="margin-top:9px">tool calls + canvas html</div>
     </section>
 
     <section class="blk">
@@ -286,7 +280,15 @@
 
   var canvas = document.getElementById('canvas');
   var params = new URLSearchParams(location.search);
-  var MODE = params.get('tools') === 'on' ? 'experimental' : 'control';
+  /* Three modes. Both Level 1 conditions get the execution tool, so the only
+     variable between them is access to the knowledge. What each mode registers
+     is decided in the tool modules, never here — this file is served to every
+     condition and must name nothing that only one of them has. */
+  var TOOLS = params.get('tools') === 'on' ? 'on' : params.get('tools') === 'exec' ? 'exec' : 'off';
+  var MODE = TOOLS === 'on' ? 'experimental' : 'control';
+  /* The score surface is off unless asked for. During a run the agent can see
+     the panel, and a measurement block points straight at the standard. */
+  var SCORE = params.get('score') === 'on';
   var RUN_ID = Math.random().toString(36).slice(2, 10);
   var STARTED_AT = new Date().toISOString();
 
@@ -360,7 +362,22 @@
 
   /* ---------- measurement ----------------------------------------------
      The implementation lives in measure.js and is fetched on first use, so
-     the page carries no measurement code while a run is in progress.      */
+     the page carries no measurement code while a run is in progress. Under
+     the default (no &score=on) the section is never mounted and measure.js
+     is never requested at all.                                            */
+
+  function mountScoreSurface() {
+    var sec = document.createElement('section');
+    sec.className = 'blk';
+    sec.innerHTML =
+      '<h2>Measurement</h2>' +
+      '<div class="btnrow"><button id="btn-measure" class="primary">Measure</button></div>' +
+      '<div id="mout"><div class="empty" style="margin-top:9px">not measured yet</div></div>';
+    var panel = document.getElementById('panel');
+    panel.insertBefore(sec, document.getElementById('blk-export'));
+  }
+
+  if (SCORE) mountScoreSurface();
 
   var measureMod = null;
   var measureLoading = null;
@@ -467,7 +484,11 @@
   /* ---------- export ------------------------------------------------------ */
 
   function buildExport() {
-    var got = lastMeasurement ? Promise.resolve(lastMeasurement) : runMeasure();
+    /* Scoring is offline from canvas.html. When the score surface is off the
+       export carries measurement: null rather than pulling measure.js in. */
+    var got = lastMeasurement ? Promise.resolve(lastMeasurement)
+            : SCORE ? runMeasure()
+            : Promise.resolve(null);
     return got.then(function (m) { return {
       probe: 'webmcp-transfer-probe',
       probeVersion: '1.0.0',
@@ -547,12 +568,14 @@
 
   /* ---------- panel wiring ------------------------------------------------ */
 
-  document.getElementById('btn-measure').addEventListener('click', function () {
-    runMeasure().catch(function (e) {
-      document.getElementById('mout').innerHTML = '<div class="empty" style="margin-top:9px"></div>';
-      document.querySelector('#mout .empty').textContent = e.message;
+  if (SCORE) {
+    document.getElementById('btn-measure').addEventListener('click', function () {
+      runMeasure().catch(function (e) {
+        document.getElementById('mout').innerHTML = '<div class="empty" style="margin-top:9px"></div>';
+        document.querySelector('#mout .empty').textContent = e.message;
+      });
     });
-  });
+  }
   document.getElementById('btn-export').addEventListener('click', exportJSON);
   document.getElementById('btn-copy').addEventListener('click', copyJSON);
 
@@ -589,7 +612,7 @@
   function onDetected(found) {
     registration.entryPoint = found.entry;
     setStatus();
-    if (MODE !== 'experimental' || toolsLoaded) return;
+    if (TOOLS === 'off' || toolsLoaded) return;
     toolsLoaded = true;
     var s = document.createElement('script');
     s.src = 'tools.js';
@@ -603,6 +626,7 @@
   /* Shared surface the tool module talks to. Contains no domain content. */
   window.PROBE = {
     mode: MODE,
+    tools: TOOLS,
     canvas: canvas,
     applyOps: applyOps,
     logCall: logCall,

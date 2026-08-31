@@ -1,0 +1,141 @@
+{
+  "probe": "webmcp-house-control",
+  "probeVersion": "1.0.0",
+  "run": {
+    "runId": "fixture",
+    "mode": "gate"
+  },
+  "gate": {
+    "mode": "enforced",
+    "verbosity": "rule",
+    "ceiling": "ask",
+    "applied": 1,
+    "refused": 1,
+    "advisory": 0
+  },
+  "standard": {
+    "shipped": {
+      "rules": {
+        "spacing": {
+          "label": "Spacing scale",
+          "on": true,
+          "perm": "ask",
+          "value": [
+            7,
+            14,
+            21,
+            28,
+            35,
+            42,
+            49,
+            56,
+            63,
+            70,
+            84,
+            98
+          ]
+        },
+        "controls": {
+          "label": "Minimum control height",
+          "on": true,
+          "perm": "ask",
+          "value": 44
+        },
+        "gap": {
+          "label": "Action gap ratio",
+          "on": true,
+          "perm": "ask",
+          "value": [
+            2,
+            7
+          ]
+        },
+        "radius": {
+          "label": "Card radius offset",
+          "on": true,
+          "perm": "ask",
+          "value": -1
+        },
+        "colour": {
+          "label": "Palette",
+          "on": true,
+          "perm": "locked",
+          "value": [
+            "oklch(16% 0.018 50)",
+            "oklch(93% 0.026 78)",
+            "oklch(70% 0.18 48)"
+          ]
+        }
+      }
+    },
+    "amended": {
+      "rules": {
+        "spacing": {
+          "label": "Spacing scale",
+          "on": true,
+          "perm": "ask",
+          "value": [
+            7,
+            14,
+            21,
+            28,
+            35,
+            42,
+            49,
+            56,
+            63,
+            70,
+            84,
+            98
+          ]
+        },
+        "controls": {
+          "label": "Minimum control height",
+          "on": true,
+          "perm": "ask",
+          "value": 50
+        },
+        "gap": {
+          "label": "Action gap ratio",
+          "on": true,
+          "perm": "ask",
+          "value": [
+            2,
+            7
+          ]
+        },
+        "radius": {
+          "label": "Card radius offset",
+          "on": true,
+          "perm": "ask",
+          "value": -1
+        },
+        "colour": {
+          "label": "Palette",
+          "on": true,
+          "perm": "locked",
+          "value": [
+            "oklch(16% 0.018 50)",
+            "oklch(93% 0.026 78)",
+            "oklch(70% 0.18 48)"
+          ]
+        }
+      }
+    },
+    "wasAmended": true
+  },
+  "requests": [
+    {
+      "id": 1,
+      "rule": "controls",
+      "text": "50",
+      "status": "approved",
+      "reason": "CTA label wraps at 49px"
+    }
+  ],
+  "events": [],
+  "canvas": {
+    "elementCount": 4,
+    "html": "<div class=\"c\"><a class=\"p\">Subscribe</a><a class=\"s\">Details</a></div><style>.c,.c *{box-sizing:border-box}.c{padding:21px;border-radius:13px;background:oklch(16% 0.018 50);color:oklch(93% 0.026 78);display:flex;gap:14px}.c a{height:49px;padding:0 21px;display:flex;align-items:center;border-radius:13px;color:oklch(16% 0.018 50);background:oklch(70% 0.18 48)}</style>"
+  }
+}

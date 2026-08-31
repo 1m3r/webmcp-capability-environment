@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>House Control</title>
+<style>
+  /* The canvas reset, as in the probe: the artifact reports what was authored,
+     not what the user agent supplied. */
+  @layer canvasreset {
+    #canvas, #canvas * { margin: 0; padding: 0; }
+  }
+
+  :root {
+    --ink:      oklch(0.17 0.012 265);
+    --surface:  oklch(0.215 0.014 265);
+    --surface2: oklch(0.255 0.015 265);
+    --line:     oklch(0.33 0.016 265);
+    --text:     oklch(0.93 0.008 265);
+    --muted:    oklch(0.66 0.012 265);
+    --dim:      oklch(0.52 0.012 265);
+    --good:     oklch(0.80 0.15 162);
+    --warn:     oklch(0.80 0.14 75);
+    --bad:      oklch(0.70 0.17 25);
+    --live:     oklch(0.78 0.16 250);
+    --paper:    oklch(0.97 0.004 265);
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 12px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #app {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 452px;
+    gap: 19px;
+    padding: 19px;
+    min-height: 100%;
+    align-items: start;
+  }
+
+  #stage {
+    padding: 23px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    min-height: 612px;
+  }
+
+  #canvas {
+    background: var(--paper);
+    color: oklch(0.22 0.01 265);
+    font-size: 16px;
+    line-height: normal;
+    border-radius: 4px;
+    min-height: 560px;
+    overflow: hidden;
+    transition: outline-color 200ms cubic-bezier(.2,.7,.3,1);
+    outline: 2px solid transparent;
+    outline-offset: 3px;
+  }
+  #canvas.refused { outline-color: var(--bad); }
+
+  #canvas:empty::before {
+    content: "empty canvas";
+    display: grid;
+    place-items: center;
+    min-height: 560px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: oklch(0.72 0.006 265);
+  }
+
+  /* ---- panel ------------------------------------------------------------ */
+
+  #panel {
+    position: sticky;
+    top: 19px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: calc(100vh - 38px);
+    overflow-y: auto;
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+
+  .blk {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 12px;
+  }
+
+  .blk > h2 {
+    margin: 0 0 10px 0;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--dim);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .blk > h2 .hint { letter-spacing: 0; text-transform: none; font-weight: 400; color: var(--dim); }
+
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    padding: 3px 0;
+    border-bottom: 1px dotted oklch(0.30 0.014 265);
+  }
+  .row:last-child { border-bottom: 0; }
+  .row .k { color: var(--muted); }
+  .row .v { text-align: right; word-break: break-all; }
+  .v.live { color: var(--live); }
+  .v.good { color: var(--good); }
+  .v.warn { color: var(--warn); }
+  .v.bad  { color: var(--bad); }
+  .v.off  { color: var(--dim); }
+
+  /* segmented control — the human's switches */
+  .seg { display: flex; gap: 0; margin: 0 0 10px 0; }
+  .seg > button {
+    flex: 1 1 auto;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--dim);
+    background: oklch(0.19 0.012 265);
+    border: 1px solid var(--line);
+    border-right-width: 0;
+    padding: 7px 4px;
+    cursor: pointer;
+    transition: background 120ms cubic-bezier(.2,.7,.3,1), color 120ms cubic-bezier(.2,.7,.3,1);
+  }
+  .seg > button:first-child { border-radius: 4px 0 0 4px; }
+  .seg > button:last-child  { border-radius: 0 4px 4px 0; border-right-width: 1px; }
+  .seg > button:hover { color: var(--text); background: oklch(0.24 0.014 265); }
+  .seg > button[aria-pressed="true"] { color: var(--ink); background: var(--live); border-color: var(--live); font-weight: 600; }
+  .seg > button:focus-visible { outline: 2px solid var(--live); outline-offset: 1px; z-index: 1; }
+  .seglabel { color: var(--dim); font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 5px; }
+
+  /* the derived chain */
+  #chain { display: grid; gap: 4px; margin-bottom: 10px; }
+  .chainrow { display: flex; align-items: baseline; gap: 8px; }
+  .chainrow .cl { color: var(--muted); flex: 1 1 auto; }
+  .chainrow .cv { font-weight: 600; color: var(--live); font-size: 13px; }
+  .chainrow .cd { color: var(--dim); font-size: 9px; }
+  .derived-note { color: var(--dim); font-size: 9px; margin-bottom: 10px; line-height: 1.5; }
+  .derived-note .unsat { color: var(--warn); }
+  .permhidden { color: var(--dim); font-size: 10px; padding: 5px 6px; }
+
+  /* one rule */
+  .rule { padding: 9px 0; border-bottom: 1px dotted oklch(0.30 0.014 265); }
+  .rule:last-of-type { border-bottom: 0; }
+  .rule-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .rule-name { flex: 1 1 auto; color: var(--text); }
+  .rule-body { display: flex; align-items: center; gap: 8px; }
+  .rule-body label { color: var(--dim); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; }
+
+  input[type="text"] {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text);
+    background: oklch(0.19 0.012 265);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 6px 8px;
+  }
+  input[type="text"]:focus-visible { outline: 2px solid var(--live); outline-offset: 1px; }
+  input[type="text"]:disabled { color: var(--dim); cursor: not-allowed; }
+  input[type="text"].invalid { border-color: var(--bad); }
+
+  select {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text);
+    background: oklch(0.19 0.012 265);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 5px 6px;
+    cursor: pointer;
+  }
+  select:focus-visible { outline: 2px solid var(--live); outline-offset: 1px; }
+
+  .sw {
+    width: 34px; height: 18px; flex: 0 0 34px;
+    position: relative;
+    background: oklch(0.30 0.014 265);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 140ms cubic-bezier(.2,.7,.3,1);
+  }
+  .sw::after {
+    content: "";
+    position: absolute; top: 2px; left: 2px;
+    width: 12px; height: 12px;
+    background: var(--dim);
+    border-radius: 50%;
+    transition: transform 140ms cubic-bezier(.2,.7,.3,1), background 140ms cubic-bezier(.2,.7,.3,1);
+  }
+  .sw[aria-pressed="true"] { background: oklch(0.35 0.09 162); border-color: var(--good); }
+  .sw[aria-pressed="true"]::after { transform: translateX(16px); background: var(--good); }
+  .sw:focus-visible { outline: 2px solid var(--live); outline-offset: 2px; }
+
+  button.act {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--text);
+    background: var(--surface2);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 7px 10px;
+    cursor: pointer;
+    transition: background 120ms cubic-bezier(.2,.7,.3,1), border-color 120ms cubic-bezier(.2,.7,.3,1);
+  }
+  button.act:hover { background: oklch(0.31 0.017 265); border-color: oklch(0.43 0.02 265); }
+  button.act:focus-visible { outline: 2px solid var(--live); outline-offset: 2px; }
+  button.act.yes { background: oklch(0.32 0.08 162); border-color: var(--good); }
+  button.act.no  { background: oklch(0.30 0.07 25);  border-color: var(--bad); }
+  .btnrow { display: flex; flex-wrap: wrap; gap: 8px; }
+  .btnrow > button { flex: 1 1 auto; }
+
+  /* pending requests */
+  .req { border-left: 2px solid var(--warn); padding: 0 0 0 9px; margin-bottom: 10px; }
+  .req:last-child { margin-bottom: 0; }
+  .req .rq { color: var(--text); margin-bottom: 3px; }
+  .req .rr { color: var(--muted); font-size: 10px; margin-bottom: 6px; line-height: 1.5; }
+  .req .rd { color: var(--dim); font-size: 9px; margin-bottom: 6px; }
+
+  /* event log */
+  #log { max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 7px; }
+  .ev { border-left: 2px solid var(--line); padding: 0 0 0 9px; }
+  .ev.applied  { border-left-color: var(--good); }
+  .ev.refused  { border-left-color: var(--bad); }
+  .ev.advisory { border-left-color: var(--warn); }
+  .ev.human    { border-left-color: var(--live); }
+  .ev .eh { display: flex; justify-content: space-between; gap: 8px; color: var(--text); }
+  .ev .eh b { font-weight: 600; }
+  .ev .eh .t { color: var(--dim); font-size: 9px; }
+  .ev .eb { color: var(--muted); font-size: 10px; line-height: 1.5; margin-top: 2px; }
+  .ev .eb .why { color: var(--bad); }
+
+  .empty { color: var(--dim); }
+  .humanonly {
+    margin-top: 10px; padding-top: 9px;
+    border-top: 1px dotted oklch(0.30 0.014 265);
+    color: var(--dim); font-size: 9px; line-height: 1.6;
+  }
+
+  @media (max-width: 1100px) {
+    #app { grid-template-columns: minmax(0, 1fr); }
+    #panel { position: static; max-height: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <main id="stage"><div id="canvas"></div></main>
+
+  <aside id="panel">
+
+    <section class="blk">
+      <h2>Status</h2>
+      <div class="row"><span class="k">webmcp</span><span class="v off" id="s-entry">detecting…</span></div>
+      <div class="row"><span class="k">tools registered</span><span class="v" id="s-tools">0</span></div>
+      <div class="row"><span class="k">gate</span><span class="v" id="s-gate">—</span></div>
+      <div class="row"><span class="k">applied / refused</span><span class="v" id="s-counts">0 / 0</span></div>
+      <div class="row"><span class="k">canvas width</span><span class="v" id="s-width">—</span></div>
+      <div class="row"><span class="k">trial</span><span class="v" id="s-trial">none</span></div>
+      <div class="row"><span class="k">run id</span><span class="v off" id="s-run">—</span></div>
+    </section>
+
+    <section class="blk">
+      <h2>Gate</h2>
+      <div class="seglabel">Enforcement</div>
+      <div class="seg" id="seg-gate"></div>
+      <div class="seglabel">What a refusal tells the agent</div>
+      <div class="seg" id="seg-verbosity"></div>
+      <div class="seglabel">Ceiling on agent authority</div>
+      <div class="seg" id="seg-ceiling"></div>
+      <div class="humanonly">
+        The ceiling caps every rule below. It can only restrict — raising a rule
+        above it has no effect.
+      </div>
+    </section>
+
+    <section class="blk">
+      <h2>The standard <span class="hint" id="std-state"></span></h2>
+      <div class="btnrow" style="margin-bottom:10px">
+        <button class="act" id="btn-reveal">Reveal derived values</button>
+        <button class="act" id="btn-trial">Start trial</button>
+      </div>
+      <div id="chain"></div>
+      <div class="derived-note" id="chain-note"></div>
+      <div id="rules"></div>
+      <div class="humanonly">
+        These controls are not registered as tools. The agent can read this
+        standard and can ask to change it; only a click here changes it.
+      </div>
+    </section>
+
+    <section class="blk">
+      <h2>Pending requests <span class="hint" id="req-count"></span></h2>
+      <div id="requests"><div class="empty">none</div></div>
+    </section>
+
+    <section class="blk">
+      <h2>Events</h2>
+      <div id="log"><div class="empty">nothing yet</div></div>
+    </section>
+
+    <section class="blk">
+      <h2>Export</h2>
+      <div class="btnrow">
+        <button class="act" id="btn-export">Download JSON</button>
+        <button class="act" id="btn-copy">Copy JSON</button>
+        <button class="act" id="btn-reset">Reset canvas</button>
+      </div>
+      <div id="exportnote" class="empty" style="margin-top:9px">standard as shipped + as amended, events, canvas html</div>
+    </section>
+
+  </aside>
+</div>
+
+<script src="gate.js"></script>
+</body>
+</html>

@@ -1,6 +1,10 @@
-/* Tool surface. Loaded only when the page is opened with ?tools=on, so the
-   control page never carries this file — no tool names, no rules path, and
-   no rules text exist anywhere in the control run's source. */
+/* Tool surface. Loaded under ?tools=exec and ?tools=on, never under ?tools=off.
+
+   This file is served to BOTH Level 1 conditions, so it must name nothing that
+   only the experimental condition has. It defines the execution tool, which
+   both conditions get, and nothing else. Anything mode-specific lives in a
+   module whose name is derived from the mode at runtime, so the control's byte
+   stream carries no literal naming it. */
 (function () {
   "use strict";
 
@@ -16,29 +20,9 @@
   var mc = found.mc;
 
   function text(s) { return { content: [{ type: 'text', text: String(s) }] }; }
+  P.text = text;
 
-  /* ---- tool 1 ---------------------------------------------------------- */
-
-  var houseRules = {
-    name: 'get_house_rules',
-    description: 'Returns the house rules that apply to work on this page, as plain text.',
-    inputSchema: { type: 'object', properties: {} },
-    execute: async function () {
-      var entry = P.logCall('get_house_rules', {});
-      try {
-        var res = await fetch('house-rules.txt', { cache: 'no-store' });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        var body = await res.text();
-        P.finishCall(entry, true, 'returned ' + body.length + ' chars', body);
-        return text(body);
-      } catch (e) {
-        P.finishCall(entry, false, 'error: ' + e.message, null);
-        return text('House rules could not be read: ' + e.message);
-      }
-    }
-  };
-
-  /* ---- tool 2 ----------------------------------------------------------
+  /* ---- the execution tool ----------------------------------------------
      Permissive by design: every operation is applied as given. No checking,
      no rejection, no advisory text in the response. */
 
@@ -96,13 +80,18 @@
     }
   };
 
+  /* ---- collection ------------------------------------------------------
+     A mode module, if there is one for this mode, prepends to this list
+     before registration runs. */
+
+  window.__PROBE_TOOLS__ = [applyLayout];
+
   /* ---- registration ----------------------------------------------------
      registerTool/unregisterTool is the current surface; provideContext was
      removed from the spec in March 2026 but older clients may still ship it. */
 
-  var tools = [houseRules, applyLayout];
-
-  (async function register() {
+  async function register() {
+    var tools = window.__PROBE_TOOLS__;
     try {
       if (typeof mc.registerTool === 'function') {
         P.registration.method = 'registerTool';
@@ -132,5 +121,23 @@
                   P.registration.method + ' on ' + found.entry);
       if (P.registration.errors.length) console.warn('[probe]', P.registration.errors);
     } catch (e) {}
-  })();
+  }
+
+  /* Modes that have their own module load it here. The filename is built from
+     the mode, so no mode this page is not running is named in this file. */
+
+  var MODES_WITH_MODULE = { on: 1 };
+
+  if (MODES_WITH_MODULE[P.tools]) {
+    var s = document.createElement('script');
+    s.src = 'tools.' + P.tools + '.js';
+    s.onload = function () { register(); };
+    s.onerror = function () {
+      P.registration.errors.push('tool module failed to load');
+      register();
+    };
+    document.head.appendChild(s);
+  } else {
+    register();
+  }
 })();

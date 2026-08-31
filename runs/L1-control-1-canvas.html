@@ -1,0 +1,751 @@
+
+<section class="coffee-shell" data-coffee-shell="" aria-labelledby="plan-title">
+  <div class="ambient ambient-one" aria-hidden="true"></div>
+  <div class="ambient ambient-two" aria-hidden="true"></div>
+
+  <article class="pricing-card" data-pricing-card="">
+    <div class="product-panel">
+      <div class="brand-row">
+        <span class="brand-mark" aria-hidden="true">FL</span>
+        <div>
+          <p class="eyebrow">First Light Coffee</p>
+          <p class="edition">Subscription No. 01</p>
+        </div>
+      </div>
+
+      <div class="bag-scene" aria-hidden="true">
+        <div class="sun-disc"></div>
+        <div class="coffee-bag">
+          <span class="bag-fold"></span>
+          <span class="bag-kicker">FIRST LIGHT</span>
+          <strong>Morning<br>Ritual</strong>
+          <span class="bag-origin">ETHIOPIA · COLOMBIA</span>
+          <div class="bag-bean bean-a"></div>
+          <div class="bag-bean bean-b"></div>
+        </div>
+        <p class="scene-note">Roasted every Tuesday<br>in small batches</p>
+      </div>
+
+      <div class="roast-spectrum">
+        <span>Bright</span>
+        <span class="spectrum-line" aria-hidden="true"><i></i></span>
+        <span>Bold</span>
+      </div>
+    </div>
+
+    <div class="plan-panel">
+      <div class="plan-topline">
+        <p class="plan-label">The Ritual Plan</p>
+        <span class="availability"><i aria-hidden="true"></i> Ships next Tuesday</span>
+      </div>
+
+      <div class="plan-copy">
+        <h1 id="plan-title">Better mornings,<br>on repeat.</h1>
+        <p>A rotating pair of remarkable coffees, selected for sweetness and roasted to glow in every brew.</p>
+      </div>
+
+      <div class="price-row">
+        <p class="price" data-price=""><span aria-hidden="true">€</span>18</p>
+        <p class="price-meta">per delivery<br><span>pause anytime</span></p>
+      </div>
+
+      <ul class="benefits" aria-label="Subscription benefits">
+        <li><span>01</span><p><strong>Two 250g bags</strong><small>Whole bean or ground to order</small></p></li>
+        <li><span>02</span><p><strong>Free tracked delivery</strong><small>Every two weeks, at your pace</small></p></li>
+        <li><span>03</span><p><strong>Brew notes inside</strong><small>Simple recipes for every coffee</small></p></li>
+      </ul>
+
+      <div class="actions">
+        <a class="action action-primary" data-action="primary" href="#subscribe">
+          <span>Start subscription</span>
+          <span class="action-arrow" aria-hidden="true">↗</span>
+        </a>
+        <a class="action action-secondary" data-action="secondary" href="#gift">
+          <span>Gift a month</span>
+          <span aria-hidden="true">→</span>
+        </a>
+      </div>
+
+      <p class="fine-print">No commitment · Skip, pause, or cancel before your next roast.</p>
+    </div>
+  </article>
+</section><style>
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap');
+
+[data-coffee-shell] {
+  --ink: oklch(24% 0.035 48);
+  --muted: oklch(48% 0.025 55);
+  --paper: oklch(95% 0.028 75);
+  --paper-deep: oklch(89% 0.055 69);
+  --cream: oklch(98% 0.015 78);
+  --copper: oklch(57% 0.145 42);
+  --moss: oklch(39% 0.055 135);
+  --line: oklch(72% 0.035 63 / 0.48);
+  --shadow: oklch(23% 0.04 48 / 0.18);
+  --duration-micro: 150ms;
+  --duration-standard: 260ms;
+  --duration-cinematic: 760ms;
+  --ease-snap: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-reveal: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-settle: cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+  container-type: inline-size;
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  position: relative;
+  overflow: clip;
+  padding: clamp(18px, 4vw, 56px);
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 12% 18%, oklch(83% 0.09 54 / 0.55), transparent 27%),
+    linear-gradient(135deg, oklch(91% 0.045 72), oklch(85% 0.07 55));
+  font-family: "DM Sans", Arial, sans-serif;
+}
+
+[data-coffee-shell],
+[data-coffee-shell] * {
+  box-sizing: border-box;
+}
+
+[data-coffee-shell] .ambient {
+  position: absolute;
+  border-radius: 999px;
+  pointer-events: none;
+  opacity: 0.62;
+  filter: blur(1px);
+}
+
+[data-coffee-shell] .ambient-one {
+  width: 34cqw;
+  aspect-ratio: 1;
+  top: -20cqw;
+  right: -8cqw;
+  background: oklch(94% 0.08 80 / 0.38);
+}
+
+[data-coffee-shell] .ambient-two {
+  width: 26cqw;
+  aspect-ratio: 1;
+  left: -12cqw;
+  bottom: -16cqw;
+  border: 1px solid oklch(41% 0.05 45 / 0.18);
+}
+
+[data-coffee-shell] .pricing-card {
+  width: min(980px, 100%);
+  min-height: min(670px, calc(100svh - 72px));
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(390px, 1.1fr);
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  background: var(--cream);
+  border: 1px solid oklch(72% 0.04 62 / 0.54);
+  border-radius: 28px;
+  box-shadow:
+    0 34px 74px -38px var(--shadow),
+    0 2px 0 oklch(100% 0 0 / 0.55) inset;
+  animation: card-arrive var(--duration-cinematic) var(--ease-settle) both;
+}
+
+[data-coffee-shell] .product-panel {
+  position: relative;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(24px, 3.5cqw, 42px);
+  overflow: hidden;
+  background:
+    linear-gradient(145deg, transparent 0 38%, oklch(84% 0.075 68 / 0.55) 38.2% 100%),
+    var(--paper);
+}
+
+[data-coffee-shell] .product-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.18;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 140 140' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.23'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}
+
+[data-coffee-shell] .brand-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  z-index: 2;
+  animation: detail-arrive var(--duration-standard) var(--ease-reveal) 120ms both;
+}
+
+[data-coffee-shell] .brand-mark {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--ink);
+  border-radius: 50%;
+  font-family: "Newsreader", Georgia, serif;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+}
+
+[data-coffee-shell] p,
+[data-coffee-shell] h1 {
+  margin: 0;
+}
+
+[data-coffee-shell] .eyebrow {
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+[data-coffee-shell] .edition {
+  margin-top: 3px;
+  color: var(--muted);
+  font-family: "Newsreader", Georgia, serif;
+  font-size: 13px;
+  font-style: italic;
+}
+
+[data-coffee-shell] .bag-scene {
+  min-height: 420px;
+  flex: 1;
+  display: grid;
+  place-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+[data-coffee-shell] .sun-disc {
+  position: absolute;
+  width: clamp(200px, 28cqw, 310px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--copper);
+  opacity: 0.9;
+  transform: translateY(-1%);
+  animation: disc-arrive var(--duration-cinematic) var(--ease-reveal) 80ms both;
+}
+
+[data-coffee-shell] .coffee-bag {
+  width: clamp(170px, 22cqw, 226px);
+  aspect-ratio: 0.72;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 34px 22px 26px;
+  clip-path: polygon(6% 2%, 94% 0, 100% 96%, 92% 100%, 8% 98%, 0 6%);
+  color: var(--paper);
+  background: var(--ink);
+  box-shadow: 0 28px 30px oklch(20% 0.03 45 / 0.22);
+  transform: rotate(-2deg);
+  animation: bag-arrive 900ms var(--ease-settle) 100ms both;
+}
+
+[data-coffee-shell] .bag-fold {
+  position: absolute;
+  top: 18px;
+  left: 12%;
+  width: 76%;
+  height: 1px;
+  background: oklch(92% 0.025 70 / 0.45);
+}
+
+[data-coffee-shell] .bag-kicker,
+[data-coffee-shell] .bag-origin {
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+}
+
+[data-coffee-shell] .coffee-bag strong {
+  margin: 22px 0 18px;
+  font-family: "Newsreader", Georgia, serif;
+  font-size: clamp(29px, 3.2cqw, 41px);
+  line-height: 0.84;
+  font-weight: 400;
+  text-align: center;
+  letter-spacing: -0.045em;
+}
+
+[data-coffee-shell] .bag-origin {
+  font-size: 7px;
+  opacity: 0.72;
+}
+
+[data-coffee-shell] .bag-bean {
+  position: absolute;
+  width: 15px;
+  height: 23px;
+  border: 1px solid oklch(78% 0.085 55 / 0.7);
+  border-radius: 55% 45% 55% 45%;
+  opacity: 0.75;
+}
+
+[data-coffee-shell] .bag-bean::after {
+  content: "";
+  width: 1px;
+  height: 16px;
+  display: block;
+  margin: 3px auto;
+  background: oklch(78% 0.085 55 / 0.7);
+  transform: rotate(20deg);
+}
+
+[data-coffee-shell] .bean-a {
+  left: 20px;
+  bottom: 27px;
+  transform: rotate(-24deg);
+}
+
+[data-coffee-shell] .bean-b {
+  right: 18px;
+  top: 53px;
+  transform: rotate(32deg);
+}
+
+[data-coffee-shell] .scene-note {
+  position: absolute;
+  right: 2px;
+  bottom: 36px;
+  color: var(--muted);
+  font-family: "Newsreader", Georgia, serif;
+  font-size: 12px;
+  line-height: 1.35;
+  font-style: italic;
+  text-align: right;
+  transform: rotate(-4deg);
+}
+
+[data-coffee-shell] .roast-spectrum {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  z-index: 2;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+[data-coffee-shell] .spectrum-line {
+  height: 1px;
+  position: relative;
+  background: var(--line);
+}
+
+[data-coffee-shell] .spectrum-line i {
+  width: 7px;
+  height: 7px;
+  position: absolute;
+  left: 59%;
+  top: 50%;
+  border-radius: 50%;
+  background: var(--copper);
+  transform: translate(-50%, -50%);
+}
+
+[data-coffee-shell] .plan-panel {
+  display: flex;
+  flex-direction: column;
+  padding: clamp(30px, 4.6cqw, 58px);
+  background: var(--cream);
+}
+
+[data-coffee-shell] .plan-topline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  animation: detail-arrive var(--duration-standard) var(--ease-reveal) 150ms both;
+}
+
+[data-coffee-shell] .plan-label {
+  color: var(--copper);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+[data-coffee-shell] .availability {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--moss);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+[data-coffee-shell] .availability i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 4px oklch(39% 0.055 135 / 0.11);
+}
+
+[data-coffee-shell] .plan-copy {
+  margin-top: clamp(42px, 6cqw, 72px);
+  animation: detail-arrive 500ms var(--ease-settle) 190ms both;
+}
+
+[data-coffee-shell] .plan-copy h1 {
+  max-width: 490px;
+  font-family: "Newsreader", Georgia, serif;
+  font-size: clamp(46px, 6.2cqw, 72px);
+  line-height: 0.88;
+  font-weight: 400;
+  letter-spacing: -0.055em;
+  text-wrap: balance;
+}
+
+[data-coffee-shell] .plan-copy > p {
+  max-width: 430px;
+  margin-top: 22px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.65;
+  text-wrap: pretty;
+}
+
+[data-coffee-shell] .price-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  margin-top: 30px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--line);
+  animation: detail-arrive 500ms var(--ease-settle) 230ms both;
+}
+
+[data-coffee-shell] .price {
+  font-family: "Newsreader", Georgia, serif;
+  font-size: clamp(52px, 6.4cqw, 74px);
+  line-height: 0.75;
+  letter-spacing: -0.065em;
+}
+
+[data-coffee-shell] .price span {
+  margin-right: 2px;
+  font-size: 0.48em;
+  vertical-align: top;
+}
+
+[data-coffee-shell] .price-meta {
+  padding-bottom: 1px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+[data-coffee-shell] .price-meta span {
+  color: var(--copper);
+}
+
+[data-coffee-shell] .benefits {
+  display: grid;
+  gap: 0;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+[data-coffee-shell] .benefits li {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+[data-coffee-shell] .benefits li > span {
+  color: var(--copper);
+  font-family: "Newsreader", Georgia, serif;
+  font-size: 11px;
+  font-style: italic;
+}
+
+[data-coffee-shell] .benefits p {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+[data-coffee-shell] .benefits strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+[data-coffee-shell] .benefits small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+[data-coffee-shell] .actions {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 28px;
+  animation: detail-arrive 500ms var(--ease-settle) 280ms both;
+}
+
+[data-coffee-shell] .action {
+  min-height: 50px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 0 18px;
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    transform var(--duration-micro) var(--ease-snap),
+    color var(--duration-standard) var(--ease-reveal),
+    background-color var(--duration-standard) var(--ease-reveal),
+    box-shadow var(--duration-standard) var(--ease-settle);
+}
+
+[data-coffee-shell] .action-primary {
+  color: var(--cream);
+  background: var(--ink);
+  box-shadow: 0 8px 18px oklch(24% 0.035 48 / 0.15);
+}
+
+[data-coffee-shell] .action-secondary {
+  color: var(--ink);
+  background: transparent;
+}
+
+[data-coffee-shell] .action:focus-visible {
+  outline: 3px solid oklch(57% 0.145 42 / 0.34);
+  outline-offset: 3px;
+}
+
+[data-coffee-shell] .action:active {
+  transform: scale(0.975);
+}
+
+[data-coffee-shell] .action[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.48;
+  pointer-events: none;
+}
+
+[data-coffee-shell] .fine-print {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+@media (hover: hover) {
+  [data-coffee-shell] .pricing-card:hover .coffee-bag {
+    transform: translateY(-8px) rotate(-1deg);
+  }
+
+  [data-coffee-shell] .coffee-bag {
+    transition: transform var(--duration-standard) var(--ease-settle);
+  }
+
+  [data-coffee-shell] .action-primary:hover {
+    transform: translateY(-2px);
+    background: oklch(from var(--ink) calc(l * 0.86) c h);
+    box-shadow: 0 12px 22px oklch(24% 0.035 48 / 0.22);
+  }
+
+  [data-coffee-shell] .action-secondary:hover {
+    transform: translateY(-2px);
+    color: var(--cream);
+    background: var(--copper);
+    border-color: var(--copper);
+  }
+}
+
+/* Named compact breakpoint: --bp-compact = 650px */
+@container (max-width: 650px) {
+  [data-coffee-shell] {
+    min-height: 100svh;
+    padding: 14px;
+  }
+
+  [data-coffee-shell] .pricing-card {
+    min-height: auto;
+    grid-template-columns: 1fr;
+    border-radius: 22px;
+  }
+
+  [data-coffee-shell] .product-panel {
+    min-height: 310px;
+    padding: 22px;
+  }
+
+  [data-coffee-shell] .brand-row {
+    align-items: flex-start;
+  }
+
+  [data-coffee-shell] .bag-scene {
+    min-height: 205px;
+  }
+
+  [data-coffee-shell] .sun-disc {
+    width: 190px;
+  }
+
+  [data-coffee-shell] .coffee-bag {
+    width: 126px;
+    padding: 22px 15px 16px;
+  }
+
+  [data-coffee-shell] .coffee-bag strong {
+    margin: 13px 0 10px;
+    font-size: 25px;
+  }
+
+  [data-coffee-shell] .bag-fold {
+    top: 12px;
+  }
+
+  [data-coffee-shell] .scene-note {
+    right: 0;
+    bottom: 12px;
+    font-size: 10px;
+  }
+
+  [data-coffee-shell] .roast-spectrum {
+    margin-top: 6px;
+  }
+
+  [data-coffee-shell] .plan-panel {
+    padding: 28px 22px 24px;
+  }
+
+  [data-coffee-shell] .plan-topline {
+    align-items: flex-start;
+  }
+
+  [data-coffee-shell] .availability {
+    white-space: normal;
+    text-align: right;
+  }
+
+  [data-coffee-shell] .plan-copy {
+    margin-top: 34px;
+  }
+
+  [data-coffee-shell] .plan-copy h1 {
+    font-size: clamp(43px, 13cqw, 60px);
+  }
+
+  [data-coffee-shell] .plan-copy > p {
+    margin-top: 16px;
+  }
+
+  [data-coffee-shell] .price-row {
+    margin-top: 24px;
+  }
+
+  [data-coffee-shell] .benefits p {
+    display: block;
+  }
+
+  [data-coffee-shell] .benefits small {
+    display: block;
+    margin-top: 2px;
+  }
+
+  [data-coffee-shell] .actions {
+    grid-template-columns: 1fr;
+    padding-top: 22px;
+  }
+
+  [data-coffee-shell] .action {
+    min-height: 50px;
+  }
+}
+
+@keyframes card-arrive {
+  from { opacity: 0; transform: translateY(18px) scale(0.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes detail-arrive {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes disc-arrive {
+  from { opacity: 0; transform: translateY(4%) scale(0.84); }
+  to { opacity: 0.9; transform: translateY(-1%) scale(1); }
+}
+
+@keyframes bag-arrive {
+  from { opacity: 0; transform: translateY(22px) rotate(-5deg); }
+  to { opacity: 1; transform: translateY(0) rotate(-2deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-coffee-shell],
+  [data-coffee-shell] *,
+  [data-coffee-shell] *::before,
+  [data-coffee-shell] *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  [data-coffee-shell] .ambient,
+  [data-coffee-shell] .product-panel::after {
+    display: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  [data-coffee-shell] {
+    --muted: oklch(32% 0.03 50);
+    --line: oklch(38% 0.03 50 / 0.78);
+  }
+}
+</style><style>/* Extra-compact embedded canvas refinement */
+@container (max-width: 340px) {
+  [data-coffee-shell] .scene-note {
+    opacity: 0;
+  }
+}</style><style>[data-coffee-shell] { --copper: oklch(56% 0.145 42); }</style><style>
+[data-coffee-shell] .action-primary:active,
+[data-coffee-shell] .action-secondary:active {
+  transform: scale(0.975);
+}
+
+[data-coffee-shell] .action-primary:focus-visible,
+[data-coffee-shell] .action-secondary:focus-visible {
+  outline: 3px solid oklch(56% 0.145 42 / 0.34);
+  outline-offset: 3px;
+}
+</style>

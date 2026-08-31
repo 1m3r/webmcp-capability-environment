@@ -45,6 +45,8 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(PORT, '127.0.0.1', () => {
-  console.log(`\n  control       http://localhost:${PORT}/?tools=off`);
-  console.log(`  experimental  http://localhost:${PORT}/?tools=on\n`);
+  console.log(`\n  L1 control       http://localhost:${PORT}/?tools=exec`);
+  console.log(`  L1 experimental  http://localhost:${PORT}/?tools=on`);
+  console.log(`  L0 control       http://localhost:${PORT}/?tools=off`);
+  console.log(`\n  add &score=on for the measurement panel — never during a run\n`);
 });

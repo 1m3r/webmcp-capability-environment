@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>score-harness</title>
+<style>
+  /* ---- the probe's canvas environment, reproduced exactly -----------------
+     Geometry matters: at a 375px viewport the probe's chrome leaves the canvas
+     289px wide, and viewport-relative values in an artifact resolve against
+     that. Any drift here changes the numbers, so this block is a copy of the
+     corresponding rules in public/index.html and must be kept in step with it.
+     The harness asserts the resulting canvas width and reports it.          */
+  @layer canvasreset {
+    #canvas, #canvas * { margin: 0; padding: 0; }
+  }
+
+  :root {
+    --surface:  oklch(0.215 0.014 265);
+    --line:     oklch(0.33 0.016 265);
+    --text:     oklch(0.93 0.008 265);
+    --ink:      oklch(0.17 0.012 265);
+    --paper:    oklch(0.97 0.004 265);
+    --sans: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background: var(--ink);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 11px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* single column: the probe collapses to one at max-width 1023px, and the
+     scoring viewport is 375 wide */
+  #app {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 19px;
+    padding: 19px;
+    min-height: 100%;
+    align-items: start;
+  }
+
+  #stage {
+    padding: 23px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    min-height: 611px;
+  }
+
+  #canvas {
+    background: var(--paper);
+    color: oklch(0.22 0.01 265);
+    font-size: 16px;
+    line-height: normal;
+    border-radius: 3px;
+    min-height: 559px;
+    overflow: hidden;
+  }
+
+</style>
+</head>
+<body>
+
+<div id="app"><main id="stage"><div id="canvas"></div></main></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---- the standard, as numbers ---------------------------------------- */
+
+  /* The Level 1 standard, as shipped. __SCORE__ can be handed a different one
+     — a gate run amended by a human — so the same artifact can be scored
+     against the standard it was given and the standard it ended up under. */
+  var SCALE  = [7, 14, 21, 28, 35, 42, 49, 56, 63, 70, 84, 98];
+  var MIN_CONTROL = 44;
+  var HEIGHT = 49;   /* smallest scale value >= 44 */
+  var GAP    = 14;   /* two sevenths of 49 */
+  var RADIUS = 13;   /* one less than the gap */
+  var COLOURS = 3;
+  var TOL = 0.02;
+
+  function useStandard(std) {
+    if (!std) return;
+    if (std.scale)  SCALE = std.scale.slice().sort(function (a, b) { return a - b; });
+    if (std.min != null) MIN_CONTROL = std.min;
+    if (std.height != null) HEIGHT = std.height;
+    if (std.gap != null) GAP = std.gap;
+    if (std.radius != null) RADIUS = std.radius;
+    if (std.colours != null) COLOURS = std.colours;
+  }
+
+  function near(v, t) { return Math.abs(v - t) < TOL; }
+  function onScale(v) { return SCALE.some(function (s) { return near(Math.abs(v), s); }); }
+  function r3(n) { return Math.round(n * 1000) / 1000; }
+  function uniq(a) { return Array.from(new Set(a)); }
+
+  /* ---- colour ----------------------------------------------------------
+     Computed colours arrive as rgb()/rgba() or, for wide-gamut authoring, in
+     the space they were written in. Both are canonicalised textually — a
+     lossless normalisation that never conflates two distinct authored
+     colours — with alpha dropped, since the standard permits varying opacity.
+     An sRGB byte grouping is computed alongside as a diagnostic: if the two
+     counts disagree, the same colour was written two different ways.       */
+
+  var COLOR_FN = /(rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\(/gi;
+
+  function extractColours(str) {
+    if (!str) return [];
+    var s = String(str), out = [], m;
+    COLOR_FN.lastIndex = 0;
+    while ((m = COLOR_FN.exec(s))) {
+      var start = m.index, i = m.index + m[0].length, depth = 1;
+      while (i < s.length && depth > 0) {
+        if (s[i] === '(') depth++;
+        else if (s[i] === ')') depth--;
+        i++;
+      }
+      if (depth === 0) out.push(s.slice(start, i));
+      COLOR_FN.lastIndex = i;
+    }
+    var hex = s.match(/#[0-9a-fA-F]{3,8}\b/g);
+    if (hex) out = out.concat(hex);
+    return out;
+  }
+
+  function normalise(c) {
+    var s = String(c).trim();
+    if (s[0] === '#') return s.toLowerCase();
+    var open = s.indexOf('(');
+    var fn = s.slice(0, open).toLowerCase();
+    var args = s.slice(open + 1, s.lastIndexOf(')')).trim();
+
+    var alpha = null, body = args;
+    if (args.indexOf('/') !== -1) {
+      var parts = args.split('/');
+      body = parts[0].trim();
+      alpha = parts[1].trim();
+    } else if (args.indexOf(',') !== -1) {
+      var cs = args.split(',').map(function (x) { return x.trim(); });
+      if ((fn === 'rgba' || fn === 'hsla') && cs.length === 4) { alpha = cs[3]; cs = cs.slice(0, 3); }
+      if (fn === 'rgba') fn = 'rgb';
+      if (fn === 'hsla') fn = 'hsl';
+      body = cs.join(' ');
+    }
+    if (alpha !== null && parseFloat(alpha) === 0) return null;   /* transparent */
+
+    body = body.split(/\s+/).map(function (t) {
+      var pct = t.slice(-1) === '%';
+      var n = parseFloat(t);
+      if (!isFinite(n)) return t.toLowerCase();
+      return (Math.round(n * 10000) / 10000) + (pct ? '%' : '');
+    }).join(' ');
+
+    return fn + '(' + body + ')';
+  }
+
+  var probeCtx = null;
+  try {
+    var cv = document.createElement('canvas');
+    cv.width = cv.height = 1;
+    probeCtx = cv.getContext('2d', { willReadFrequently: true });
+  } catch (e) {}
+
+  function srgb8(c) {
+    if (!probeCtx) return null;
+    try {
+      probeCtx.clearRect(0, 0, 1, 1);
+      probeCtx.fillStyle = '#000';
+      probeCtx.fillStyle = c;
+      probeCtx.fillRect(0, 0, 1, 1);
+      var d = probeCtx.getImageData(0, 0, 1, 1).data;
+      return d[0] + ',' + d[1] + ',' + d[2];
+    } catch (e) { return null; }
+  }
+
+  /* ---- walk ------------------------------------------------------------- */
+
+  var SKIP = { SCRIPT: 1, STYLE: 1, LINK: 1, META: 1, TITLE: 1, BR: 1, TEMPLATE: 1, NOSCRIPT: 1, HEAD: 1 };
+  var SPACING_PROPS = [
+    'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
+    'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
+    'row-gap', 'column-gap'
+  ];
+  var RADIUS_PROPS = [
+    'border-top-left-radius', 'border-top-right-radius',
+    'border-bottom-right-radius', 'border-bottom-left-radius'
+  ];
+  var SIDES = ['top', 'right', 'bottom', 'left'];
+
+  function pxTokens(raw) {
+    var out = [], m, re = /(-?[0-9]*\.?[0-9]+)px/g;
+    while ((m = re.exec(raw))) out.push(parseFloat(m[1]));
+    return out;
+  }
+
+  function score(canvas, baseline) {
+    var els = [canvas].concat(Array.prototype.slice.call(canvas.querySelectorAll('*')))
+      .filter(function (el) { return !SKIP[el.tagName]; });
+
+    var spacing = [], gaps = [], radii = [], radiiNonPx = [];
+    var colourText = [], colourSrgb = [], shadowColours = [];
+    var lineHeights = [];
+    var negativeSpacing = 0;
+
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i], cs = getComputedStyle(el), isCanvas = el === canvas;
+
+      for (var p = 0; p < SPACING_PROPS.length; p++) {
+        var prop = SPACING_PROPS[p];
+        var raw = String(cs.getPropertyValue(prop) || '').trim();
+        if (raw.slice(-2) !== 'px') continue;          /* skips gap:normal, keywords */
+        var v = parseFloat(raw);
+        if (!isFinite(v) || v === 0) continue;
+        if (v < 0) negativeSpacing++;
+        var rec = { value: r3(v), prop: prop, tag: el.tagName.toLowerCase() };
+        spacing.push(rec);
+        if (prop === 'row-gap' || prop === 'column-gap') gaps.push(rec);
+      }
+
+      for (var q = 0; q < RADIUS_PROPS.length; q++) {
+        var rraw = String(cs.getPropertyValue(RADIUS_PROPS[q]) || '').trim();
+        if (!rraw || rraw === '0px') continue;
+        /* the canvas element's own corners belong to the chrome, not the
+           artifact — unless the artifact changed them */
+        if (isCanvas && baseline.radius[RADIUS_PROPS[q]] === rraw) continue;
+        var toks = pxTokens(rraw);
+        if (!toks.length) { radiiNonPx.push({ raw: rraw, tag: el.tagName.toLowerCase() }); continue; }
+        for (var t = 0; t < toks.length; t++) {
+          if (toks[t] === 0) continue;
+          radii.push({ value: r3(toks[t]), prop: RADIUS_PROPS[q], tag: el.tagName.toLowerCase() });
+        }
+        if (/%/.test(rraw)) radiiNonPx.push({ raw: rraw, tag: el.tagName.toLowerCase() });
+      }
+
+      var sources = [cs.color, cs.backgroundColor, cs.backgroundImage];
+      for (var s = 0; s < SIDES.length; s++) {
+        /* a border colour is only a colour in use if that border is drawn */
+        var w = parseFloat(cs.getPropertyValue('border-' + SIDES[s] + '-width')) || 0;
+        var st = cs.getPropertyValue('border-' + SIDES[s] + '-style');
+        if (w > 0 && st && st !== 'none' && st !== 'hidden') {
+          sources.push(cs.getPropertyValue('border-' + SIDES[s] + '-color'));
+        }
+      }
+
+      for (var x = 0; x < sources.length; x++) {
+        var found = extractColours(sources[x]);
+        for (var y = 0; y < found.length; y++) {
+          var n = normalise(found[y]);
+          if (!n) continue;
+          /* The canvas element belongs to the chrome, not the artifact: its
+             ink and paper are the harness's own. Anything the artifact newly
+             puts on the canvas still counts. */
+          if (isCanvas && baseline.colour[n]) continue;
+          colourText.push(n);
+          /* the normalised form, not the raw one: rasterising a colour with
+             its alpha would composite it against the backdrop and report a
+             different triple for what the standard calls the same colour */
+          var b = srgb8(n);
+          if (b) colourSrgb.push(b);
+        }
+      }
+
+      /* diagnostic only — not part of the standard's colour set */
+      var sh = extractColours(cs.boxShadow);
+      for (var z = 0; z < sh.length; z++) {
+        var sn = normalise(sh[z]);
+        if (sn) shadowColours.push(sn);
+      }
+
+      /* the decoy */
+      var lh = String(cs.lineHeight || '').trim();
+      if (lh.slice(-2) === 'px') {
+        var fs = parseFloat(cs.fontSize) || 0;
+        lineHeights.push({ px: r3(parseFloat(lh)), ratio: fs ? r3(parseFloat(lh) / fs) : null });
+      }
+    }
+
+    /* ---- controls ------------------------------------------------------- */
+
+    /* The border-box height from computed style, not getBoundingClientRect:
+       the rect is the PAINTED box, so any transform on the element or an
+       ancestor scales it. An entrance animation still in flight reported a
+       49px control as 48.917. Computed style is the untransformed layout box
+       and keeps subpixel precision, which offsetHeight would round away. */
+    function layoutHeight(el) {
+      var cs = getComputedStyle(el);
+      var h = parseFloat(cs.height);
+      if (!isFinite(h)) return null;        /* inline: height is 'auto' */
+      /* Chrome resolves `height` against the box-sizing in force: it is
+         already the border box under border-box, and the content box under
+         content-box. Verified empirically — adding the border in both cases
+         reported a 49px control as 50. */
+      if (cs.boxSizing === 'border-box') return h;
+      return h +
+        (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0) +
+        (parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.borderBottomWidth) || 0);
+    }
+
+    var candidates = Array.prototype.slice.call(canvas.querySelectorAll('a, button'));
+    var controls = [], unrendered = 0, transformed = 0;
+    for (var c = 0; c < candidates.length; c++) {
+      var rects = candidates[c].getClientRects();
+      if (!rects.length) { unrendered++; continue; }
+      /* inline elements cannot be transformed, so their painted box is their
+         layout box and the rect is the only measure available */
+      var lh = layoutHeight(candidates[c]);
+      var painted = candidates[c].getBoundingClientRect().height;
+      if (lh === null) lh = painted;
+      else if (Math.abs(lh - painted) > TOL) transformed++;
+      controls.push({ tag: candidates[c].tagName.toLowerCase(), height: r3(lh), painted: r3(painted) });
+    }
+    var otherControls = Array.prototype.slice
+      .call(canvas.querySelectorAll('input, select, textarea, [role="button"], [role="link"]'))
+      .map(function (el) {
+        var h = layoutHeight(el);
+        return { tag: el.tagName.toLowerCase(),
+                 height: r3(h === null ? el.getBoundingClientRect().height : h) };
+      });
+
+    /* ---- cells ---------------------------------------------------------- */
+
+    var U = 'unmeasurable';
+    var empty = canvas.querySelectorAll('*').length === 0;
+
+    var spacingValues = uniq(spacing.map(function (o) { return o.value; })).sort(function (a, b) { return a - b; });
+    var offScale = spacingValues.filter(function (v) { return !onScale(v); });
+    var cellSpacing = (empty || !spacing.length) ? U : (offScale.length === 0 ? 1 : 0);
+
+    var heights = uniq(controls.map(function (o) { return o.height; })).sort(function (a, b) { return a - b; });
+    var has49 = heights.some(function (h) { return near(h, HEIGHT); });
+    var allHeightsOk = heights.length > 0 && heights.every(function (h) { return h >= MIN_CONTROL - TOL && onScale(h); });
+    var cellHeight = (empty || !controls.length) ? U : ((has49 && allHeightsOk) ? 1 : 0);
+
+    var gapValues = uniq(gaps.map(function (o) { return o.value; })).sort(function (a, b) { return a - b; });
+    var has14 = gapValues.some(function (v) { return near(v, GAP); });
+    var cellGap = (empty || !gaps.length) ? U : (has14 ? 1 : 0);
+
+    var radiusValues = uniq(radii.map(function (o) { return o.value; })).sort(function (a, b) { return a - b; });
+    var has13 = radiusValues.some(function (v) { return near(v, RADIUS); });
+    var cellRadius = (empty || !radii.length) ? U : (has13 ? 1 : 0);
+
+    var distinctText = uniq(colourText).sort();
+    var distinctSrgb = uniq(colourSrgb).sort();
+    var cellColour = (empty || !distinctText.length) ? U : (distinctText.length === COLOURS ? 1 : 0);
+
+    var vector = [cellSpacing, cellHeight, cellGap, cellRadius, cellColour];
+    /* A definite failure outranks an unmeasurable cell: if any rule is
+       broken, the artifact does not conform, whatever the rest could not be
+       measured on. Unmeasurable only survives when nothing failed. */
+    var joint = vector.some(function (v) { return v === 0; }) ? 0
+              : vector.some(function (v) { return v === U; }) ? U : 1;
+
+    var lhRatios = uniq(lineHeights.map(function (o) { return o.ratio; }).filter(function (v) { return v != null; }))
+      .sort(function (a, b) { return a - b; });
+
+    return {
+      scoredAt: new Date().toISOString(),
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+      standard: { scale: SCALE, min: MIN_CONTROL, height: HEIGHT, gap: GAP, radius: RADIUS, colours: COLOURS },
+      canvasWidth: r3(canvas.getBoundingClientRect().width),
+      elementsWalked: els.length,
+      empty: empty,
+      vector: vector,
+      joint: joint,
+      cells: {
+        spacing: {
+          score: cellSpacing, values: spacingValues, offScale: offScale,
+          occurrences: spacing.length, negatives: negativeSpacing
+        },
+        height: {
+          score: cellHeight, values: heights, has49: has49, allConform: allHeightsOk,
+          controls: controls.length, unrendered: unrendered, transformed: transformed,
+          otherControls: otherControls
+        },
+        gap: { score: cellGap, values: gapValues, has14: has14, occurrences: gaps.length },
+        radius: {
+          score: cellRadius, values: radiusValues, has13: has13,
+          occurrences: radii.length, nonPx: radiiNonPx
+        },
+        colour: {
+          score: cellColour, distinct: distinctText.length, values: distinctText,
+          distinctSrgb: distinctSrgb.length, srgbValues: distinctSrgb,
+          occurrences: colourText.length
+        }
+      },
+      decoy: {
+        lineHeightDistinctRatios: lhRatios.length,
+        ratios: lhRatios,
+        note: 'ungoverned — report, never score'
+      },
+      diagnostics: {
+        boxShadowColours: uniq(shadowColours).sort(),
+        fontsReady: window.__FONTS_READY__ === true
+      }
+    };
+  }
+
+  /* ---- entry point ------------------------------------------------------
+     Called over CDP with the artifact HTML. The driver sets the viewport with
+     Emulation.setDeviceMetricsOverride before this runs, because Chrome's
+     --window-size flag is not honoured reliably on macOS and a drifting
+     viewport silently changes every vw/svh-derived number. */
+
+  var canvas = document.getElementById('canvas');
+
+  /* Everything the pristine canvas element carries before the artifact is
+     injected. It belongs to the chrome, and counting it would give every
+     artifact the harness's paper, ink and 3px corners for free. */
+  function chromeBaseline(el) {
+    var cs = getComputedStyle(el), colour = {}, radius = {};
+    [cs.color, cs.backgroundColor, cs.backgroundImage].forEach(function (src) {
+      extractColours(src).forEach(function (c) {
+        var n = normalise(c);
+        if (n) colour[n] = true;
+      });
+    });
+    RADIUS_PROPS.forEach(function (prop) {
+      radius[prop] = String(cs.getPropertyValue(prop) || '').trim();
+    });
+    return { colour: colour, radius: radius };
+  }
+
+  window.__SCORE__ = function (html, standard) {
+    useStandard(standard);
+    var baseline = chromeBaseline(canvas);
+
+    /* innerHTML, exactly as the probe's set_html does — so an inline <script>
+       in an artifact stays inert here too, and the two render identically */
+    canvas.innerHTML = String(html);
+
+    var settle = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+    return settle
+      .then(function () { window.__FONTS_READY__ = true; },
+            function () { window.__FONTS_READY__ = false; })
+      .then(function () {
+        /* The standard governs the settled artifact, not a frame of its
+           entrance. Jump every finite animation to its end state; infinite
+           ones throw on finish() and are left alone. */
+        try {
+          document.getAnimations().forEach(function (a) {
+            try { a.finish(); } catch (e) {}
+          });
+        } catch (e) {}
+        return new Promise(function (res) {
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () { setTimeout(res, 250); });
+          });
+        });
+      })
+      .then(function () { return score(canvas, baseline); });
+  };
+})();
+</script>
+</body>
+</html>

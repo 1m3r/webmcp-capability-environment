@@ -19,6 +19,9 @@ node server.mjs
 | Control | `http://localhost:5177/?tools=off` |
 | Experimental | `http://localhost:5177/?tools=on` |
 
+**Since the Level 1 prep, the measurement panel is hidden by default** — reproducing
+this run needs `&score=on` on both URLs, or step 6 has no MEASURE button to press.
+
 Anything other than `tools=on` is control. Port: `node server.mjs 8080`.
 
 ## Protocol — identical for both runs

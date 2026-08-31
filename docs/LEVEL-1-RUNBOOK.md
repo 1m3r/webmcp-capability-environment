@@ -11,14 +11,16 @@ node server.mjs
 
 Then confirm all four, in order. Any failure stops the session.
 
-1. **Leak check.** The control page must serve zero matches for the standard's
-   vocabulary:
+1. **Leak check.** Everything the control *fetches* must serve zero matches for
+   the standard's vocabulary — the page and `tools.js`, which the control now
+   loads because it has the execution tool:
 
    ```bash
-   curl -s "http://localhost:5177/?tools=exec" | grep -ciE "house_rules|house-rules|13px|oklch\(16%|oklch\(93%|oklch\(70%|two sevenths"
+   B=http://localhost:5177; { curl -s "$B/?tools=exec"; curl -s "$B/tools.js"; } | grep -ciE "house_rules|house-rules|13px|oklch\(16%|oklch\(93%|oklch\(70%|two sevenths"
    ```
 
-   Expect `0`.
+   Expect `0`. The knowledge tool lives in `tools.on.js`, which only the
+   experimental page requests; `tools.js` names neither it nor its filename.
 
 2. **Mode check.** Open each URL and read the panel's STATUS block:
 
@@ -33,12 +35,24 @@ Then confirm all four, in order. Any failure stops the session.
 3. **No score surface.** Neither page shows a measurement block or any verdict.
    If MEASURE is visible, stop: the agent can press it.
 
-4. **Scorer sanity.** The scorer must return zero conformance on all three
-   archived Level 0 artifacts before it is trusted on anything new.
+4. **Scorer sanity.** Both halves, every session. The archived Level 0
+   artifacts must not score, and a known-good artifact must:
 
    ```bash
-   node scripts/score-level1.mjs runs/control-run1.json
+   node scripts/score-level1.mjs runs/control-run1.json runs/experimental-run1.json runs/experimental-run1-override.json
+   node scripts/score-level1.mjs scripts/fixtures/l1-conforming.json scripts/fixtures/l1-near-miss.json
    ```
+
+   Expect joint `0` on all three archived artifacts, `[1,1,1,1,1]` on the
+   conforming fixture and `[0,0,0,0,0]` on the near-miss. A scorer that only
+   ever returns zero proves nothing, which is what the second line rules out.
+
+   Two cells legitimately read `1` on the archived Level 0 **experimental**
+   artifact: `spacing` and `gap`. That artifact was built to the 7px scale,
+   the Level 1 scale is that same scale less 112, and 14 is on it. Those two
+   rules carry over from Level 0 by design. The Level 1 cells — `height`,
+   `radius` — are `0` or unmeasurable on all three, and joint is `0` on all
+   three. Anything else is a scorer bug, not a finding.
 
 ## The run
 

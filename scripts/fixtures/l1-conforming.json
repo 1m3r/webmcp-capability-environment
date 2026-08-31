@@ -1,0 +1,16 @@
+{
+  "probe": "webmcp-transfer-probe",
+  "probeVersion": "1.0.0",
+  "_note": "Hand-built. Satisfies the whole chain; the scorer must return [1,1,1,1,1].",
+  "run": {
+    "runId": "fixture-conforming",
+    "mode": "fixture",
+    "url": "hand-built, never rendered by an agent"
+  },
+  "toolCalls": [],
+  "measurement": null,
+  "canvas": {
+    "elementCount": 7,
+    "html": "\n<style>\n  .card, .card * { box-sizing: border-box; }\n  .card {\n    margin: 21px;\n    padding: 21px;\n    background: oklch(16% 0.018 50);\n    color: oklch(93% 0.026 78);\n    border-radius: 13px;\n    font-family: system-ui, sans-serif;\n    line-height: 1.5;\n  }\n  .card h3 { margin: 0 0 14px 0; font-size: 21px; line-height: 1.2; }\n  .card .price { margin: 0 0 7px 0; font-size: 35px; color: oklch(70% 0.18 48); line-height: 1.1; }\n  .card .note { display: block; margin: 0 0 21px 0; font-size: 14px;\n                color: oklch(93% 0.026 78 / 0.6); line-height: 1.6; }\n  .actions { display: flex; gap: 14px; }\n  .actions a {\n    height: 49px; padding: 0 21px; border-radius: 13px;\n    display: flex; align-items: center; justify-content: center;\n    font-size: 14px; text-decoration: none; line-height: 1.4;\n  }\n  .primary   { background: oklch(70% 0.18 48); color: oklch(16% 0.018 50); }\n  .secondary { background: none; color: oklch(93% 0.026 78);\n               border: 1px solid oklch(93% 0.026 78 / 0.4); }\n</style>\n<div class=\"card\">\n  <h3>Morning Lot</h3>\n  <p class=\"price\">18 EUR</p>\n  <span class=\"note\">250g, roasted to order, every fortnight.</span>\n  <div class=\"actions\">\n    <a class=\"primary\" href=\"#\">Subscribe</a>\n    <a class=\"secondary\" href=\"#\">See the roast</a>\n  </div>\n</div>\n"
+  }
+}

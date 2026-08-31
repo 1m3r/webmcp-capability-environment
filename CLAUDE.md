@@ -1,11 +1,27 @@
 # CLAUDE.md — Webmcp-Capability Environment
 # Project file. Global rules live in ~/.claude/CLAUDE.md and are not repeated here.
 
-## Status
+## Status — FROZEN 2026-08-31
+
+This probe is **frozen**, complete and working. Read `FROZEN.md` first: it
+carries what was established, what is reusable, the traps already paid for, and
+what was never done. Do not resume it without reading that file.
+
+It was stopped because proving the concept narrowed the concept. The work
+continuing from here is about the broader idea — an agent acting inside an
+environment the page defines, collaborating with a human on a shared screen —
+and starts as new applications rather than as more levels of this one.
+
+## Status of the frozen probe
 - **Level 0 (Test 00, transfer probe): COMPLETE and PASSED.** Report in
   `docs/TEST-00-REPORT.md`, artifacts in `runs/`. Do not re-open; cite it.
-- **Level 1 (Compositional Capability Transfer): specified, not built.**
-  Spec `docs/LEVEL-1-SPEC.md` · build brief `handoffs/2026-08-30_level-1-prep.md`.
+- **Level 1 (Compositional Capability Transfer): built, 1 of 3 pairs run.**
+  Spec `docs/LEVEL-1-SPEC.md` · protocol `docs/LEVEL-1-RUNBOOK.md` ·
+  pair 1 result `runs/L1-PAIR-1.md`. PASS is *not* established — it needs 3/3
+  experimental and 0/2 control. Pairs 2 and 3 outstanding.
+- **Level 3 (the gate): built, not yet run against a live agent.**
+  `docs/LEVEL-3-GATE.md` · `public/gate.html` + `gate.js` + `gate-tools.js`.
+  Separate pages by design, so the probe stays byte-reproducible.
 - The master context's own "Test 01" (§6, brand conformance gate) is a *different*
   and now partly superseded experiment. Do not conflate it with Level 1.
 
@@ -59,3 +75,27 @@
 - 2026-08-30 · Report + illustrated PDF written; all figures reproduced post-hoc.
 - 2026-08-30 · Level 1 specified. Candidate rules screened against the archived
   artifacts first: two proposals were unmeasurable on this task and were cut.
+- 2026-08-30 · Level 1 environment built. `13` purged from the chrome; third
+  mode `?tools=exec`; score surface behind `&score=on`; offline scorer.
+  `get_house_rules` moved to `tools.on.js` — leaving it in the shared
+  `tools.js` would have put its name and the rules path into the *control's*
+  byte stream, which the handoff's own leak check would not have caught.
+- 2026-08-30 · Scorer drives Chrome over CDP: `--window-size` is unreliable on
+  macOS (500x725, then 756x469, for one request of 375x812) and every
+  vw/svh-derived value moves with it.
+- 2026-08-30 · Level 1 pair 1: experimental [1,1,1,1,1], control [0,0,1,0,0].
+  `border-radius: 13px` present; control landed on 50px controls, 10px gap,
+  28px radius. Decoy held (7 vs 8 line-height ratios).
+- 2026-08-30 · The control produced a 13px *margin*. Not the chain's output —
+  its radii are 22/999/50% — but it contradicts §3's "13 is not a value
+  designers reach for", and the §7 INVALID criterion needs an explicit ruling.
+  See `runs/L1-PAIR-1.md`.
+- 2026-08-30 · Scorer bug found on live data and fixed: `getBoundingClientRect`
+  returns the PAINTED box, so an entrance animation mid-`scale()` reported a
+  49px control as 48.917. Now finishes animations and reads the layout box,
+  respecting box-sizing. Re-validated against fixtures and all archived runs.
+- 2026-08-30 · Level 3 gate built. Refuses violations, never omissions, so
+  incremental building still works. Apply/measure/roll back in one synchronous
+  task, so a rejected layout is never painted. Panel controls are not tools;
+  `request_rule_change` only queues. Export carries the standard as shipped and
+  as amended, and the scorer reports both vectors.
