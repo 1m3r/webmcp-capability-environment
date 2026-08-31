@@ -141,7 +141,7 @@ every action tagged by actor. The portrait is a keepsake, which is the point.
 
 ## 7. Testing
 
-- `round.test.js` — the state machine. Out-of-order submits refused, commits
+- `game.test.js` — the state machine. Out-of-order submits refused, commits
   immutable, transitions exhaustive.
 - **`secrecy.test.js`** — for every state before `revealed`, neither the payload
   of `get_round()` nor the output of `render()` contains either answer's text.
