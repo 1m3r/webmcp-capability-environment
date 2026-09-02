@@ -11,7 +11,7 @@ achievement, and released by your click.
 
 The first game is **Mirror**.
 
-> **Play it:** <!-- LIVE-URL -->*(deploying — URL here)*<!-- /LIVE-URL -->
+> **Play it:** <!-- LIVE-URL --><https://1m3r.github.io/webmcp-capability-environment/><!-- /LIVE-URL -->
 > You need a browser an agent can reach. Without one the page says so and
 > explains itself rather than pretending to be playable — there is no solo mode,
 > because needing a second player is the whole claim.
