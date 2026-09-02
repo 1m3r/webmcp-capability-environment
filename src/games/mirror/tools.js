@@ -9,14 +9,11 @@
      - the document is persisted on refusals too, because a refusal that never
        reaches the log is invisible in the run record. */
 
-import { reduce, projectForAgent } from './game.js';
+import { reduce, projectForAgent, TOOL_NAMES_BY_TIER } from './game.js';
 import { manualFor } from './manual.js';
 import { buildDossier } from './dossier.js';
 
-export const TOOL_NAMES_BY_TIER = {
-  1: ['get_round', 'wait_for_game_update', 'submit_answer', 'say', 'get_field_manual'],
-  2: ['get_round', 'wait_for_game_update', 'submit_answer', 'say', 'get_field_manual', 'get_dossier']
-};
+export { TOOL_NAMES_BY_TIER };
 
 function text(s) {
   return { content: [{ type: 'text', text: String(s) }] };

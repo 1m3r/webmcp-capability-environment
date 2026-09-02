@@ -8,6 +8,15 @@ import { roundPlan, ROUND_COUNT } from './questions.js';
 
 export const DOSSIER_ROUND = 4;
 
+/* The agent's whole body, per tier. It lives here rather than in tools.js
+   because the transmission screen renders it, and render.js -> tools.js would
+   close a cycle through dossier.js. tools.js re-exports it, and tools.test.js
+   asserts it matches what buildTools() actually registers. */
+export const TOOL_NAMES_BY_TIER = {
+  1: ['get_round', 'wait_for_game_update', 'submit_answer', 'say', 'get_field_manual'],
+  2: ['get_round', 'wait_for_game_update', 'submit_answer', 'say', 'get_field_manual', 'get_dossier']
+};
+
 export const VERDICTS = {
   portrait: ['landed', 'missed'],
   quiz: ['match', 'miss']
@@ -62,6 +71,38 @@ export function lastRefusal(doc) {
     if (entry.outcome === 'ok' && CLEARS_REFUSAL.has(entry.action)) return null;
   }
   return null;
+}
+
+/* The dossier is earned and not yet given. */
+export function canGrant(doc) {
+  return doc.tier === 1
+    && doc.rounds.filter((r) => r.state === 'judged').length >= DOSSIER_ROUND;
+}
+
+/* The offer belongs on the stage right now.
+
+   Narrower than canGrant on purpose: the offer is a MOMENT, made once, when the
+   round that earns it has just been judged. canGrant stays true for the rest of
+   the game, and a panel that rendered under every subsequent round would be a
+   nag rather than an offer — the sidebar button is the fallback after this. */
+export function atGrantMoment(doc) {
+  return canGrant(doc)
+    && doc.roundIndex === DOSSIER_ROUND - 1
+    && doc.rounds[doc.roundIndex].state === 'judged';
+}
+
+/* The tier was just granted, so the page owes the moment.
+
+   Keyed on the GRANT, not on a round index. The draft design keyed the
+   interstitial on `roundIndex === 3`, which means pressing Next round before
+   granting loses the moment permanently — and its only proposed mitigation was
+   a line in the runbook. This repository's founding result is that prose does
+   not carry authority, so mitigating with a runbook line would be that exact
+   mistake. Derived from the log, so it needs no new state field, and it fires
+   for a grant taken at any point from any control. */
+export function justGranted(doc) {
+  const last = doc.log[doc.log.length - 1];
+  return Boolean(last && last.action === 'grant_tier' && last.outcome === 'ok');
 }
 
 /* The human has answered, or was never going to. */

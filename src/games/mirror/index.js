@@ -1,4 +1,4 @@
-import { createDoc, reduce, isComplete, DOSSIER_ROUND } from './game.js';
+import { createDoc, reduce, isComplete, canGrant, atGrantMoment } from './game.js';
 import { renderGame, renderPortrait, renderStart } from './render.js';
 import { buildTools } from './tools.js';
 
@@ -14,8 +14,10 @@ export const mirror = {
   renderStart,
   renderPortrait,
   exportBase: 'mirror',
-  /* The only thing the shell needs to know about this game's unlock. */
-  canGrant: (doc) =>
-    doc.tier === 1 && doc.rounds.filter((r) => r.state === 'judged').length >= DOSSIER_ROUND,
+  /* The only thing the shell needs to know about this game's unlock. Shared
+     with the renderer so the sidebar button and the stage offer can never
+     disagree about whether the dossier is available. */
+  canGrant,
+  atGrantMoment,
   grantLabel: 'Open the dossier'
 };

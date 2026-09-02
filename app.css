@@ -16,7 +16,13 @@ body {
   display: grid;
   grid-template-columns: 1fr minmax(19rem, 25rem);
   grid-template-rows: auto 1fr;
-  min-height: 100vh;
+  /* Fixed height with the two panes scrolling internally, rather than one long
+     scrolling document. The status bar carries the tool count, and the count
+     ticking 5 -> 6 when a human grants the dossier is the most WebMCP-native
+     beat in the game — a whole-document scroll took it off screen at exactly
+     the wrong moment. It stays put now, and so does the shared log. */
+  height: 100vh;
+  overflow: hidden;
   background: var(--ground);
   color: var(--ink);
   font-family: var(--font-text);
@@ -51,7 +57,14 @@ body {
 
 /* ---- the round ------------------------------------------------------- */
 
-.stage { padding: var(--space-5) var(--space-4); display: grid; justify-items: center; }
+.stage {
+  padding: var(--space-5) var(--space-4);
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  overflow-y: auto;
+  min-height: 0;
+}
 .round { width: min(100%, 48rem); }
 
 .round__count {
@@ -221,6 +234,7 @@ button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   flex-direction: column;
   gap: var(--space-3);
   min-height: 0;
+  overflow-y: auto;
 }
 .panel__title {
   font-family: var(--font-mono);
@@ -264,7 +278,8 @@ button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 /* ---- small screens: the offset collapses rather than surviving -------- */
 
 @media (max-width: 60rem) {
-  body { grid-template-columns: 1fr; }
+  body { grid-template-columns: 1fr; height: auto; min-height: 100vh; overflow: visible; }
+  .stage, .panel { overflow-y: visible; }
   .round__cards { grid-template-columns: 1fr; gap: var(--space-3); }
   .card--agent, .card--human { transform: none; }
   .round__question { font-size: var(--step-2); }
@@ -326,4 +341,132 @@ button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
 @media (max-width: 60rem) {
   .start__modes { grid-template-columns: 1fr; }
+}
+
+/* ---- the grant offer -------------------------------------------------- */
+
+/* Sits BELOW the round, never instead of it, so round 4's reveal stays on
+   screen while the offer is made. No accent: this is an offer, not a state. */
+.grant {
+  width: min(100%, 48rem);
+  margin-top: var(--space-5);
+  padding: var(--space-4);
+  border: 1px solid var(--rule);
+  border-radius: 0.75rem;
+  background: var(--ground-raised);
+  animation: land var(--dur-reveal) var(--ease-signal) both;
+}
+.grant__label {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+  text-transform: lowercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 var(--space-2);
+}
+.grant__title {
+  font-family: var(--font-display);
+  font-size: var(--step-2);
+  font-weight: 500;
+  line-height: 1.15;
+  margin: 0 0 var(--space-2);
+  max-width: 24ch;
+}
+.grant__body { margin: 0; max-width: 58ch; color: var(--ink); }
+.grant__controls { margin-top: var(--space-3); }
+.grant__note {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+  margin: var(--space-3) 0 0;
+  max-width: 58ch;
+}
+
+/* ---- the transmission -------------------------------------------------- */
+
+/* The second signature moment. The ground lifts, the verb resolves in mono at
+   display scale, and the status bar's tool count ticks on its own.
+
+   Deliberately spends NEITHER accent. Cyan means committed and amber means
+   revealed; this is a third kind of event and it is carried by light and type
+   instead of by a hue, which is what keeps the other two legible. */
+.transmission {
+  width: min(100%, 48rem);
+  min-height: 24rem;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-4);
+  border-radius: 0.75rem;
+  background: var(--ground-raised);
+  animation: lift 620ms var(--ease-signal) both;
+}
+.transmission__label {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+  text-transform: lowercase;
+  letter-spacing: 0.08em;
+  margin: 0;
+}
+
+/* 11 characters of `get_dossier`, resolving one glyph at a time like a signal
+   coming in. steps(11) is the character count, not a round number. */
+.transmission__name {
+  font-family: var(--font-mono);
+  font-size: var(--step-3);
+  color: var(--ink);
+  margin: 0;
+  width: 11ch;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  animation: resolve 900ms steps(11) 240ms both;
+}
+
+.transmission__tools {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+}
+.transmission__tool {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--rule);
+  border-radius: 0.375rem;
+}
+/* The new verb is brighter, not tinted — no accent is spent here. */
+.transmission__tool[data-new="true"] {
+  color: var(--ink);
+  border-color: var(--ink-dim);
+  animation: land var(--dur-reveal) var(--ease-signal) 1000ms both;
+}
+
+.transmission__count {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--step-1);
+  margin: 0;
+}
+.transmission__from { color: var(--ink-dim); text-decoration: line-through; }
+.transmission__arrow { color: var(--ink-dim); }
+.transmission__to { color: var(--ink); }
+.transmission__body { margin: 0; max-width: 52ch; color: var(--ink-dim); }
+.transmission__controls { margin-top: var(--space-2); }
+
+@keyframes lift {
+  from { opacity: 0; transform: translateY(1.25rem) scale(0.99); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes resolve {
+  from { width: 0; }
+  to   { width: 11ch; }
 }

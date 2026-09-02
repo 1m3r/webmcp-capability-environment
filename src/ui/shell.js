@@ -20,6 +20,17 @@ let found = null;
 let registration = { method: 'none', registered: 0, errors: [] };
 let registeredNames = [];
 
+/* The one number the shell holds that is not in the document. The transmission
+   fires on the version that granted the tier and is dismissed by matching it,
+   so a dismissal costs no state field and leaves no event in the journey. */
+let transmissionSeen = null;
+
+/* The grant offer renders below round 4 rather than replacing it, which is
+   right — you keep the reveal you just earned — but on a laptop it lands past
+   the fold. Scrolled into view once, on the render where it first appears, so
+   it cannot be missed and does not fight the page on every render after. */
+let grantWasOffered = false;
+
 function load() {
   try {
     const raw = localStorage.getItem(game.storageKey);
@@ -95,9 +106,24 @@ function render() {
     renderStatus();
     return;
   }
-  stage.innerHTML = game.render(doc);
+  stage.innerHTML = game.render(doc, { transmissionSeen });
   renderLog();
   renderStatus();
+
+  const offered = game.atGrantMoment(doc);
+  if (offered && !grantWasOffered) {
+    /* Deferred a frame so the stage has laid out and knows its scrollHeight.
+       Scrolling the stage to its end rather than calling scrollIntoView on the
+       panel: the offer is the last thing in the stage, and an explicit target
+       cannot be clamped or interrupted the way a centred scroll was. */
+    requestAnimationFrame(() => {
+      /* Instant, not smooth. A smooth scroll on this element is unreliable
+         across browsers — it was observed animating back to 0 — and a demo
+         cannot depend on it. The round stays above; scroll up to re-read it. */
+      stage.scrollTo({ top: stage.scrollHeight, behavior: 'auto' });
+    });
+  }
+  grantWasOffered = offered;
 }
 
 /* ---- human input. None of this exists as a tool. --------------------- */
@@ -119,6 +145,10 @@ stage.addEventListener('click', (event) => {
   if (action === 'reveal') dispatch({ type: 'reveal' });
   if (action === 'judge') dispatch({ type: 'judge', verdict: button.dataset.verdict });
   if (action === 'next') dispatch({ type: 'next' });
+  if (action === 'grant') dispatch({ type: 'grant_tier' });
+  /* Not a reducer action: dismissing the transmission changes nothing about the
+     game, and an event for it would be noise in the run record. */
+  if (action === 'dismiss') { transmissionSeen = doc.version; render(); }
 });
 
 stage.addEventListener('submit', (event) => {
@@ -140,6 +170,8 @@ el('restart').addEventListener('click', () => {
   if (doc && doc.log.length > 0 &&
       !confirm('Restart wipes every answer and the whole log. There is no undo. Continue?')) return;
   doc = null;
+  transmissionSeen = null;
+  grantWasOffered = false;
   try { localStorage.removeItem(game.storageKey); } catch { /* nothing to clear */ }
   waits.notify(0);   // release any agent waiting on a version that will never come
   render();

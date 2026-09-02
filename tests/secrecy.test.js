@@ -237,3 +237,52 @@ test('cyan retires at the reveal, so one card is never in two states', () => {
   assert.doesNotMatch(html, /data-committed="true"/,
     'after the reveal the committed halo must retire and leave the moment to amber');
 });
+
+/* ---- the grant and the transmission -----------------------------------
+
+   Both are new surfaces that render while a game is in flight, so both are
+   inside the secrecy rule. The transmission in particular renders at display
+   scale, which is the worst possible place for a leak. */
+
+import { renderGrant, renderGranted } from '../src/games/mirror/render.js';
+import { justGranted } from '../src/games/mirror/game.js';
+
+function atGrantMoment(mode = 'portrait') {
+  let doc = createDoc(0, { mode });
+  for (let i = 0; i < 4; i++) {
+    if (i > 0) doc = reduce(doc, { type: 'next' }).doc;
+    doc = reduce(doc, { type: 'agent_submit', text: `${AGENT}${i}` }).doc;
+    doc = reduce(doc, { type: 'human_submit', text: `${HUMAN}${i}` }).doc;
+    doc = reduce(doc, { type: 'reveal' }).doc;
+    doc = reduce(doc, { type: 'judge', verdict: 'landed' }).doc;
+  }
+  return doc;
+}
+
+test('the grant offer carries no answer text of its own', () => {
+  const html = renderGrant(atGrantMoment());
+  assert.ok(!html.includes(AGENT), 'the grant offer leaked an agent answer');
+  assert.ok(!html.includes(HUMAN), 'the grant offer leaked a human answer');
+});
+
+test('the transmission carries no answer text', () => {
+  const doc = reduce(atGrantMoment(), { type: 'grant_tier' }).doc;
+  assert.equal(justGranted(doc), true);
+  const html = renderGranted(doc);
+  assert.ok(!html.includes(AGENT), 'the transmission leaked an agent answer');
+  assert.ok(!html.includes(HUMAN), 'the transmission leaked a human answer');
+});
+
+/* The grant can only be reached with four rounds already revealed, so nothing
+   is secret by then — but a renderer that is safe only by circumstance is a
+   renderer waiting to be moved. Assert it where it cannot be reached, too. */
+test('the transmission stays mute about an unrevealed round beneath it', () => {
+  let doc = reduce(atGrantMoment(), { type: 'grant_tier' }).doc;
+  doc = reduce(doc, { type: 'next' }).doc;
+  doc = reduce(doc, { type: 'agent_submit', text: AGENT }).doc;
+  doc = reduce(doc, { type: 'grant_tier' }).doc;   // refused: already granted
+
+  const html = renderGame(doc, {});
+  assert.ok(!html.includes(AGENT),
+    'round 5 is uncommitted and its answer must not appear anywhere on the stage');
+});
