@@ -4,7 +4,10 @@
    test assert on the rendered output in Node. If this module ever reaches for
    `document`, the game's central promise stops being testable. */
 
-import { isExcused, readyToReveal, isComplete } from './game.js';
+import {
+  isExcused, readyToReveal, isComplete,
+  VERDICTS, VERDICT_LABELS, goodVerdict
+} from './game.js';
 import { QUIZ_PASS } from './questions.js';
 
 const ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -45,9 +48,13 @@ export function renderRound(doc) {
   if (readyToReveal(doc, round)) {
     controls.push('<button type="button" data-action="reveal">Reveal</button>');
   }
+  /* Derived from the mode, never hardcoded. A control the page draws must be a
+     move the reducer accepts, and controls.test.js asserts exactly that. */
   if (round.state === 'revealed') {
-    controls.push('<button type="button" data-action="judge" data-verdict="match">Match</button>');
-    controls.push('<button type="button" data-action="judge" data-verdict="miss">Miss</button>');
+    for (const verdict of VERDICTS[doc.mode]) {
+      controls.push(`<button type="button" data-action="judge" data-verdict="${verdict}">${
+        VERDICT_LABELS[verdict]}</button>`);
+    }
   }
   if (round.state === 'judged' && doc.roundIndex + 1 < doc.rounds.length) {
     controls.push('<button type="button" data-action="next">Next round</button>');
@@ -80,7 +87,7 @@ export function renderRound(doc) {
 export function renderPortrait(doc) {
   const lines = ['# Mirror — a portrait in two columns', ''];
   const done = doc.rounds.filter((r) => r.state === 'judged' || r.state === 'revealed');
-  const matched = done.filter((r) => r.verdict === 'match').length;
+  const matched = done.filter((r) => r.verdict === goodVerdict(doc.mode)).length;
 
   for (const [i, round] of doc.rounds.entries()) {
     if (round.state !== 'judged' && round.state !== 'revealed') continue;
@@ -94,7 +101,7 @@ export function renderPortrait(doc) {
     lines.push('');
   }
 
-  lines.push('---', '', `${matched} of ${done.length} judged a match.`, '');
+  lines.push('---', '', `${matched} of ${done.length} judged ${goodVerdict(doc.mode)}.`, '');
   return lines.join('\n');
 }
 
@@ -125,7 +132,7 @@ export function renderStart() {
 
 export function renderResults(doc) {
   const judged = doc.rounds.filter((r) => r.state === 'judged');
-  const good = doc.mode === 'quiz' ? 'match' : 'landed';
+  const good = goodVerdict(doc.mode);
   const hits = judged.filter((r) => r.verdict === good).length;
 
   const headline = doc.mode === 'quiz'

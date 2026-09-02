@@ -13,6 +13,23 @@ export const VERDICTS = {
   quiz: ['match', 'miss']
 };
 
+/* The button labels live beside the vocabulary they send, because when they
+   lived apart they drifted: the renderer hardcoded the quiz words and portrait
+   mode became unplayable at the first verdict — the button offered `match`, the
+   reducer accepted only `landed`, and the round had no legal move left. The
+   good verdict is first in each pair, which is what goodVerdict() reads. */
+export const VERDICT_LABELS = {
+  landed: 'Landed', missed: 'Missed',
+  match: 'Match', miss: 'Miss'
+};
+
+/* Which verdict counts as a hit, per mode. One definition: renderResults,
+   renderPortrait and the dossier all used to derive this for themselves, and
+   one of the three got it wrong. */
+export function goodVerdict(mode) {
+  return VERDICTS[mode][0];
+}
+
 /* answerAboutAgent is the single source of truth for the excusal. Rounds keep
    their nominal humanTarget; everything else derives from here, so the two can
    never disagree. */
