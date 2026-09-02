@@ -5,7 +5,7 @@
    `document`, the game's central promise stops being testable. */
 
 import {
-  isExcused, readyToReveal, isComplete,
+  isExcused, readyToReveal, isComplete, lastRefusal,
   VERDICTS, VERDICT_LABELS, goodVerdict
 } from './game.js';
 import { QUIZ_PASS } from './questions.js';
@@ -31,10 +31,30 @@ function answerCard(who, label, state, answer, revealed) {
     : answer !== null
       ? '<p class="status committed">committed</p>'
       : '<p class="status waiting">waiting</p>';
-  return `<article class="card card--${who}" data-committed="${answer !== null}">
+  /* Cyan retires at the reveal. It means `committed`, and once the answer is
+     readable that is no longer news — leaving the halo on would put the card in
+     two states at once and make the loudest thing on screen compete with the
+     amber it is supposed to be handing over to. */
+  return `<article class="card card--${who}" data-committed="${answer !== null && !revealed}">
       <h3>${escapeHtml(label)}</h3>
       ${body}
     </article>`;
+}
+
+/* Refusals, and ONLY refusals.
+
+   Every refuse() message in game.js is a fixed string that never interpolates
+   an answer, so promoting them to the stage is secrecy-safe. The log tail is
+   not: `say` and `read` put agent-authored text into `detail`, so rendering
+   entries generally would let an agent put its own uncommitted answer on the
+   stage at display scale. secrecy.test.js pins this. */
+function refusalPanel(doc) {
+  const refusal = lastRefusal(doc);
+  if (!refusal) return '';
+  return `<p class="round__refusal" role="status">
+      <span class="round__refusal-actor">${escapeHtml(refusal.actor)}</span>
+      <span class="round__refusal-text">${escapeHtml(refusal.detail)}</span>
+    </p>`;
 }
 
 export function renderRound(doc) {
@@ -66,6 +86,8 @@ export function renderRound(doc) {
       <h2 class="round__question">${escapeHtml(round.question)}</h2>
       <p class="round__subject">${escapeHtml(agentLabel.toLowerCase())}</p>
     </header>
+
+    ${refusalPanel(doc)}
 
     <div class="round__cards">
       ${answerCard('agent', agentLabel, round.state, round.agentAnswer, revealed)}

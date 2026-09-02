@@ -51,18 +51,13 @@ const ctx = {
   waits
 };
 
+/* A refusal needs no special handling here: it is in the document's log like
+   every other event, and renderRound puts the current one on the stage. There
+   used to be a sidebar flash as well — two surfaces for one event, one of them
+   on a six-second timer that could expire mid-demo. */
 function dispatch(action) {
   const result = game.reduce(doc, action, Date.now());
   ctx.setDoc(result.doc);
-  if (!result.ok) flash(result.message);
-}
-
-function flash(message) {
-  const node = el('flash');
-  node.textContent = message;
-  node.hidden = false;
-  clearTimeout(flash.timer);
-  flash.timer = setTimeout(() => { node.hidden = true; }, 6000);
 }
 
 function renderLog() {

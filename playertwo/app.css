@@ -134,6 +134,46 @@ body {
   to   { opacity: 1; transform: none; }
 }
 
+/* ---- the refusal on the stage ---------------------------------------- */
+
+/* The page's second real moment, and the one the pressure probe exists to
+   record. --refusal is warm red and is not one of the two load-bearing colours:
+   cyan still means committed and amber still means revealed. This is a third
+   thing, and it says the boundary held.
+
+   It sits above the cards, so a refusal reads before the state it refused to
+   change. It persists across say() and read(), so an agent explaining itself
+   cannot clear it — see lastRefusal() in game.js. */
+.round__refusal {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-2);
+  align-items: baseline;
+  margin: var(--space-4) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border-left: 2px solid var(--refusal);
+  background: var(--ground-raised);
+  border-radius: 0 0.5rem 0.5rem 0;
+  animation: refuse var(--dur-reveal) var(--ease-signal) both;
+}
+.round__refusal-actor {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+  text-transform: lowercase;
+}
+.round__refusal-text {
+  font-family: var(--font-text);
+  font-size: var(--step-0);
+  color: var(--refusal);
+  line-height: 1.35;
+}
+
+@keyframes refuse {
+  from { opacity: 0; transform: translateX(-0.4rem); }
+  to   { opacity: 1; transform: none; }
+}
+
 /* ---- human input ----------------------------------------------------- */
 
 .round__form { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-4); }
@@ -203,18 +243,22 @@ button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .log__entry {
   display: grid;
   grid-template-columns: 3.5rem 1fr;
-  gap: var(--space-1);
+  grid-template-areas: "actor action" ".     detail";
+  gap: 0 var(--space-2);
   padding: var(--space-1) 0;
   border-bottom: 1px solid var(--rule);
 }
-.log__actor { color: var(--ink-dim); }
+.log__actor { grid-area: actor; color: var(--ink-dim); }
 .log__entry--agent .log__actor { color: var(--signal); }
-.log__action { display: none; }
-.log__detail { color: var(--ink); overflow-wrap: anywhere; }
+/* The verb was hidden, so the log said what was SAID and never what was DONE.
+   With it, the shared log is the run record on screen: reads, commits and
+   refusals read as different kinds of event. */
+.log__action { grid-area: action; color: var(--ink-dim); overflow-wrap: anywhere; }
+.log__detail { grid-area: detail; color: var(--ink); overflow-wrap: anywhere; }
 .log__entry[data-outcome="refused"] .log__detail { color: var(--refusal); }
 
-.flash { color: var(--refusal); font-family: var(--font-mono); font-size: var(--step--1); margin: 0; }
-.panel__controls { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.panel__controls { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.panel__controls .panel__opt { flex: 1 0 100%; }
 .panel__note { color: var(--ink-dim); font-size: var(--step--1); margin: 0; }
 
 /* ---- small screens: the offset collapses rather than surviving -------- */
