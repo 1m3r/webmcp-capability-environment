@@ -1,6 +1,7 @@
 import { createDoc, reduce, isComplete, canGrant, atGrantMoment } from './game.js';
 import { renderGame, renderPortrait, renderStart } from './render.js';
 import { buildTools } from './tools.js';
+import { renderLanding } from './landing.js';
 
 export const mirror = {
   id: 'mirror',
@@ -12,6 +13,7 @@ export const mirror = {
   buildTools,
   render: renderGame,
   renderStart,
+  renderLanding,
   renderPortrait,
   exportBase: 'mirror',
   /* The only thing the shell needs to know about this game's unlock. Shared
