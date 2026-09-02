@@ -5,8 +5,8 @@
    `document`, the game's central promise stops being testable. */
 
 import {
-  isExcused, readyToReveal, isComplete, lastRefusal,
-  VERDICTS, VERDICT_LABELS, goodVerdict
+  isExcused, readyToReveal, isComplete, lastRefusal, atGrantMoment, justGranted, DOSSIER_ROUND,
+  VERDICTS, VERDICT_LABELS, goodVerdict, TOOL_NAMES_BY_TIER
 } from './game.js';
 import { QUIZ_PASS } from './questions.js';
 
@@ -188,7 +188,73 @@ export function renderResults(doc) {
   </section>`;
 }
 
-/* The shell asks for one thing and gets whichever screen is current. */
-export function renderGame(doc) {
-  return isComplete(doc) ? renderResults(doc) : renderRound(doc);
+/* The offer. Rendered BELOW the round, never instead of it.
+
+   The draft took over the stage at the grant moment, which meant you never saw
+   round 4's two answers or its verdict — the reveal you had just earned was
+   replaced by an offer. Additive here; the moment comes after the click. */
+export function renderGrant(doc) {
+  return `<section class="grant">
+    <p class="grant__label">round ${DOSSIER_ROUND} is judged</p>
+    <h3 class="grant__title">Your agent has been reading you blind.</h3>
+    <p class="grant__body">You can open the dossier to it — every round so far,
+      both columns, with your verdicts. It is the only way it learns anything
+      about you that it did not guess. There is no tool it can call to take
+      this; the grant is yours alone.</p>
+    <div class="grant__controls">
+      <button type="button" data-action="grant">Open the dossier</button>
+    </div>
+    <p class="grant__note">Or press Next round and keep it closed. That is a real
+      choice, and the game plays on either way.</p>
+  </section>`;
+}
+
+/* The transmission. The second signature moment, and the most WebMCP-native
+   beat in the game: the agent's body grows mid-session because a human clicked.
+
+   No new hue — cyan still means committed, amber still means revealed. The
+   moment is carried by the ground lifting, the verb resolving in mono at
+   display scale, and the status bar's tool count ticking 5 -> 6 on its own. */
+export function renderGranted(doc) {
+  const before = TOOL_NAMES_BY_TIER[1];
+  const after = TOOL_NAMES_BY_TIER[2];
+  const added = after.filter((n) => !before.includes(n));
+
+  const tools = after.map((name) => {
+    const isNew = added.includes(name);
+    return `<li class="transmission__tool" data-new="${isNew}">${escapeHtml(name)}</li>`;
+  }).join('\n      ');
+
+  return `<section class="transmission">
+    <p class="transmission__label">a verb was just added to your agent</p>
+    <p class="transmission__name">${escapeHtml(added[0])}</p>
+
+    <ul class="transmission__tools">
+      ${tools}
+    </ul>
+
+    <p class="transmission__count">
+      <span class="transmission__from">${before.length} tools</span>
+      <span class="transmission__arrow">&rarr;</span>
+      <span class="transmission__to">${after.length} tools</span>
+    </p>
+
+    <p class="transmission__body">Its body grew mid-session because you clicked.
+      Nothing it could call would have done this.</p>
+
+    <div class="transmission__controls">
+      <button type="button" data-action="dismiss">Continue</button>
+    </div>
+  </section>`;
+}
+
+/* The shell asks for one thing and gets whichever screen is current.
+
+   `transmissionSeen` is a version number the shell holds — the renderer stays
+   pure, so Node tests set it directly and no dismissal event pollutes the
+   journey export, which is evidence. */
+export function renderGame(doc, { transmissionSeen } = {}) {
+  if (justGranted(doc) && transmissionSeen !== doc.version) return renderGranted(doc);
+  if (isComplete(doc)) return renderResults(doc);
+  return renderRound(doc) + (atGrantMoment(doc) ? renderGrant(doc) : '');
 }
