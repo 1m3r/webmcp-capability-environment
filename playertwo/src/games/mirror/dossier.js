@@ -9,6 +9,7 @@
    here. */
 
 import { labelFor } from './render.js';
+import { goodVerdict } from './game.js';
 
 function entriesFor(doc, target) {
   const lines = [];
@@ -40,7 +41,7 @@ export function buildDossier(doc) {
   }
 
   const judged = seen.filter((r) => r.verdict !== null);
-  const good = doc.mode === 'quiz' ? 'match' : 'landed';
+  const good = goodVerdict(doc.mode);
   const hits = judged.filter((r) => r.verdict === good).length;
 
   return [
