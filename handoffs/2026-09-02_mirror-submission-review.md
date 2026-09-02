@@ -17,6 +17,65 @@ Read first, in this order:
 
 ---
 
+## Launch prompt
+
+Paste the block below to open the session this handoff is written for. Same
+convention as `docs/MIRROR-BRAINSTORM-BRIEF.md`, and for the same reason: a
+prompt that lives only in a chat window dies with the machine it was typed on.
+
+```
+Mirror — the game in playertwo/ — ships to the WebMCP Challenge. Your job this
+session is to REVIEW AND IMPROVE a design, then execute it. That design was
+written on a phone by a session that could not see the page. It is a first
+draft and it is marked PROPOSED, NOT APPROVED. Treat it that way.
+
+READ FIRST — single entry point, and it tells you what to read next, in order:
+  handoffs/2026-09-02_mirror-submission-review.md
+
+Do not start with the specs. The handoff carries six decisions with their
+reasons and six already-verified code facts, precisely so you do not spend an
+hour re-deriving them.
+
+WHERE YOU ARE RUNNING: desktop macOS. You have localhost, a browser, and a
+WebMCP-capable one (Chrome with chrome://flags/#enable-webmcp-testing, or
+ChatGPT desktop's built-in browser — Sol or Terra, not Luna). The committed
+typefaces (Avenir Next Condensed, Arial Rounded MT Bold) exist here. So unlike
+the last session you CAN judge type, layout and motion — look at it, don't
+reason about it from the source.
+
+THE CLOCK: deadline 3 September 2026, 13:00 PDT = 3 September, 22:00
+Europe/Paris. Convert it once, write the local time at the top of your notes,
+plan against it. It is roughly two working days, not one morning.
+
+STATE: built and green — 95 tests, `node --test 'playertwo/tests/*.test.js'`.
+Runs at `node playertwo/server.mjs` on port 5179. Branch feat/player-two,
+clean at 83daf07. Nothing in the handoff has been built yet.
+
+THE JOB, in this order:
+ 1. Resolve R1–R10 in Part 4 of the handoff. Each one either fixed or
+    knowingly accepted with the reason written down. R1 is a real defect the
+    last session found in its own design — start there.
+ 2. Then build, then run, in the order given in Part 3.
+
+Announce the phase. This is BUILD/POLISH, not DESIGN: the tone is committed
+and is not reopening. The work touches more than three files, so plan first.
+
+DO NOT RESTART, though you may deliberately overturn any of it if you say why:
+the commit ordering (the agent answers first, every round, and the page refuses
+my input until it has — that is the one claim the game exists to make, and
+secrecy.test.js asserts it); the two load-bearing colours (cyan means
+committed, amber means revealed, one meaning each, spent nowhere else); the
+zero-dependency vanilla ES modules with no build step; and the six decisions in
+Part 1 of the handoff.
+
+The highest-value hour is still the one that has never happened: no live agent
+has ever played Mirror. Protect the smoke test in block 3 — it is where you
+find out whether the agent reaches for get_field_manual unprompted, and you
+want that at 09:30 with time to iterate, not at 11:00 with the camera running.
+```
+
+---
+
 ## The clock — get this right before planning anything
 
 The deadline is **3 September 2026, 13:00 PDT**, which is **3 September, 22:00
