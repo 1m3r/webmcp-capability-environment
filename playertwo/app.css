@@ -470,3 +470,126 @@ button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   from { width: 0; }
   to   { width: 11ch; }
 }
+
+/* ---- the landing screen ------------------------------------------------ */
+
+/* No game means no shared log and nothing to export or restart, so the sidebar
+   is furniture with nothing in it. The stage takes the whole width instead. */
+body[data-landing="true"] { grid-template-columns: 1fr; }
+body[data-landing="true"] .panel { display: none; }
+
+/* Shown when the page has nobody to register its tools with. Same ground, same
+   faces, same tokens as the game — the point is that a judge without a WebMCP
+   browser still sees what this is, not a second visual system pretending to be
+   a product page. Spends neither accent: nothing here is committed or revealed. */
+.landing { width: min(100%, 52rem); }
+
+.landing__eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+  letter-spacing: 0.08em;
+  margin: 0 0 var(--space-3);
+}
+.landing__title {
+  font-family: var(--font-display);
+  font-size: var(--step-3);
+  font-weight: 500;
+  line-height: 1.05;
+  margin: 0 0 var(--space-3);
+  max-width: 18ch;
+}
+.landing__lede { margin: 0 0 var(--space-5); max-width: 58ch; }
+
+.landing__cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+.landing__col {
+  padding: var(--space-3);
+  border: 1px solid var(--rule);
+  border-radius: 0.75rem;
+  background: var(--ground-raised);
+}
+.landing__h {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-dim);
+  margin: 0 0 var(--space-2);
+}
+.landing__tools, .landing__denied {
+  list-style: none;
+  margin: 0 0 var(--space-2);
+  padding: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+.landing__tools code {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--ink);
+}
+/* Struck through, because these are not verbs the agent has and is refused —
+   they are verbs that do not exist on its surface at all. */
+.landing__denied li {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+  text-decoration: line-through;
+  text-decoration-color: var(--ink-dim);
+}
+.landing__note {
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.landing__gate {
+  padding: var(--space-4);
+  border-left: 2px solid var(--rule);
+  background: var(--ground-raised);
+  border-radius: 0 0.75rem 0.75rem 0;
+  margin-bottom: var(--space-4);
+}
+.landing__gate p { margin: 0 0 var(--space-2); max-width: 62ch; }
+.landing__gate p:last-child { margin-bottom: 0; }
+.landing__gate code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.landing__how { color: var(--ink-dim); }
+.landing__how em { color: var(--ink); font-style: normal; }
+
+.landing__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-2);
+}
+.landing__link {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--ink);
+  text-underline-offset: 0.3em;
+}
+.landing__link:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.landing__caveat {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+  margin: 0;
+  max-width: 58ch;
+}
+
+@media (max-width: 60rem) {
+  .landing__cols { grid-template-columns: 1fr; }
+  .landing__title { font-size: var(--step-2); }
+}

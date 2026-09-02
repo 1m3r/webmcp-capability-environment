@@ -31,6 +31,12 @@ let transmissionSeen = null;
    it cannot be missed and does not fight the page on every render after. */
 let grantWasOffered = false;
 
+/* Filled in at deploy time. Empty strings simply drop the link. */
+const LINKS = {
+  repoUrl: 'https://github.com/1m3r/webmcp-capability-environment',
+  videoUrl: ''
+};
+
 function load() {
   try {
     const raw = localStorage.getItem(game.storageKey);
@@ -87,6 +93,7 @@ function renderLog() {
 }
 
 function renderStatus() {
+  document.body.dataset.landing = String(showLanding());
   el('s-entry').textContent = found ? found.entry : 'no model context';
   el('s-tools').textContent = `${registration.registered} tools`;
   el('s-tier').textContent = doc ? `tier ${doc.tier}` : 'no game';
@@ -96,10 +103,29 @@ function renderStatus() {
   grant.textContent = game.grantLabel;
   const opt = el('panel-opt');
   opt.hidden = !doc || doc.mode !== 'portrait';
+  /* Nothing to export and nothing to restart until a game exists. */
+  el('export').hidden = !doc;
+  el('restart').hidden = !doc;
   if (doc) el('panel-opt-input').checked = doc.answerAboutAgent !== false;
 }
 
+/* A judge arriving in ordinary Chrome gets the landing screen instead of a
+   start screen that leads to a game which cannot take its first turn. Only when
+   there is nothing to resume — a saved game still belongs to whoever saved it —
+   and ?play=1 opts out so the page can be developed without the flag. */
+function showLanding() {
+  return !found
+    && !doc
+    && new URLSearchParams(location.search).get('play') !== '1';
+}
+
 function render() {
+  if (showLanding()) {
+    stage.innerHTML = game.renderLanding(LINKS);
+    el('log').innerHTML = '';
+    renderStatus();
+    return;
+  }
   if (!doc) {
     stage.innerHTML = game.renderStart();
     el('log').innerHTML = '';
@@ -205,8 +231,10 @@ async function syncTools() {
 }
 
 async function boot() {
-  render();
+  /* detect() first, then render once. Rendering before detection would show the
+     start screen for a frame and then replace it with the landing screen. */
   found = detect();
+  render();
   if (!found) {
     renderStatus();
     console.warn('[mirror] no model context — the page is mute to an agent');
