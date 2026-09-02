@@ -11,6 +11,11 @@ achievement, and released by your click.
 
 The first game is **Mirror**.
 
+> **Play it:** <!-- LIVE-URL -->*(deploying — URL here)*<!-- /LIVE-URL -->
+> You need a browser an agent can reach. Without one the page says so and
+> explains itself rather than pretending to be playable — there is no solo mode,
+> because needing a second player is the whole claim.
+
 ## Mirror, in two modes
 
 **Portrait.** Each round poses one question, and you answer it *about each
@@ -54,6 +59,21 @@ type until it has committed — a UI gate, and a testable one.
 
 The secret is protected by *when* things happen. It survives a perfect observer.
 
+## Two moments the page spends everything on
+
+**The reveal.** Both cards lift and cross-fade from a status word to the answer,
+the agent's 80ms before yours, because that is the order everything else in this
+game follows. Cyan means committed and retires the instant the answer is
+readable; amber means revealed and appears nowhere else. By round three you know
+what the colours mean without having been told, which is the page teaching
+itself with no text.
+
+**The transmission.** At round four you can open the dossier to your agent. You
+click, `syncTools()` re-registers, and its body grows from five verbs to six
+mid-session — the status bar ticks `5 tools` → `6 tools` while you watch. It is
+keyed on the grant rather than on the round, so it happens whenever you decide
+to, and it spends neither accent: no colour is available to mean a third thing.
+
 ## What only you can do
 
 There is no tool to reveal a round, judge a match, advance to the next round,
@@ -80,7 +100,7 @@ files you download.
 node --test 'playertwo/tests/*.test.js'
 ```
 
-95 tests, no dependencies. `journey.test.js` drives a stub agent through all
+133 tests, no dependencies. `journey.test.js` drives a stub agent through all
 eight rounds headlessly — including a self-driving agent that waits for its
 teammate between rounds — so the game is proven to close before any live run.
 
@@ -100,6 +120,7 @@ so nothing about the result is attributable to a toolchain.
       manual.js              what each tier hands the agent
       tools.js               the tool surface, built per tier
       render.js              state -> HTML, and state -> portrait markdown
+      landing.js             what a visitor with no agent sees instead
 
 **Everything that carries a promise is pure.** The reducer, the agent
 projection, the renderer and the dossier are all DOM-free functions, which is
