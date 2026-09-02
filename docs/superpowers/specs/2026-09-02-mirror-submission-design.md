@@ -364,23 +364,31 @@ can see reads, commits and refusals as distinct kinds of event.
 
 ## 6. Definition of done — tracked
 
-    [ ] R0a  portrait playable end to end, verified by clicking
-    [ ] R0b  portrait export counts landed
-    [ ] round-trip test class: every rendered control is a legal action
-    [ ] R1   refusal persists across say/read, clears on state change
-    [ ] R2   grant offer renders below the round
-    [ ] R3   transmission keyed on the grant, not the round index
-    [ ] R4   runbook split into run 1 and run 2
-    [ ] R5   secrecy covers both new renderers + detail-field path
-    [ ] R6   flash deleted
-    [ ] R7   no-model-context screen ships; replay named as a knowing cut
-    [ ] R8   deployed to GitHub Pages, URL in README
-    [ ] R9   beat sheet written before recording          ✔ §4
-    [ ] R10  clock ladder with named cuts                 ✔ §1
-    [ ] R11  cyan retires at the reveal
-    [ ] R12  sidebar controls wrap cleanly
-    [ ] R13  log shows the verb
-    [ ] suite green, more than 95 tests
+    [x] R0a  portrait playable end to end, verified by clicking     62b4d62
+    [x] R0b  portrait export counts landed                          62b4d62
+    [x] round-trip test class: every rendered control is legal      62b4d62
+    [x] R1   refusal persists across say/read, clears on state      c490642
+    [x] R2   grant offer renders below the round                    c7c7720
+    [x] R3   transmission keyed on the grant, not the round index   c7c7720
+    [x] R4   runbook split into a smoke test and two runs           aa09826
+    [x] R5   secrecy covers both new renderers + the detail path    c490642
+    [x] R6   flash deleted                                          c490642
+    [x] R7   no-model-context screen ships; replay a knowing cut    05fcb09
+    [x] R8   deployed, URL in README                                1708f52
+    [x] R9   beat sheet written before recording                    §4
+    [x] R10  clock ladder with named cuts                           §1
+    [x] R11  cyan retires at the reveal                             c490642
+    [x] R12  sidebar controls wrap cleanly                          c490642
+    [x] R13  log shows the verb                                     c490642
+    [x] suite green: 133 tests, up from 95
+
+    OUTSTANDING — all operator-gated, none of it buildable alone:
+    [ ] Block 0  the smoke test with a live agent   <- do this first
+    [ ] Run 1    quiz, measured, recorded
+    [ ] Run 2    portrait, clean, recorded
+    [ ] the video cut
+    [ ] the submission copy
+    [ ] the headline decision (portrait or quiz) — operator deferred it
 
 ## 7. Unchanged, and not reopened
 
