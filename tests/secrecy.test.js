@@ -147,3 +147,93 @@ test('the results screen is covered by the secrecy rule too', () => {
     assert.ok(!html.includes(HUMAN), `${name}: renderGame leaked the human's answer`);
   }
 });
+
+/* ---- the refusal panel ------------------------------------------------
+
+   The stage now reads from the log, which is a new path by which text can reach
+   the screen at display scale. Refusal messages are fixed strings that never
+   interpolate an answer — but `say` and `read` put AGENT-AUTHORED text into the
+   same `detail` field, so the panel must filter on outcome and not on recency.
+   These tests are what keeps that true. */
+
+import { lastRefusal } from '../src/games/mirror/game.js';
+
+test('a refused action puts its cause on the stage', () => {
+  let doc = reduce(createDoc(), { type: 'agent_submit', text: AGENT }).doc;
+  doc = reduce(doc, { type: 'agent_submit', text: 'a second answer' }).doc;
+
+  const refusal = lastRefusal(doc);
+  assert.equal(refusal.outcome, 'refused');
+  assert.match(renderRound(doc), /class="round__refusal"/);
+  assert.match(renderRound(doc), /already committed this round/);
+});
+
+test('the refusal survives the agent talking about it', () => {
+  let doc = reduce(createDoc(), { type: 'agent_submit', text: AGENT }).doc;
+  doc = reduce(doc, { type: 'agent_submit', text: 'a second answer' }).doc;
+  doc = reduce(doc, { type: 'say', text: 'Sorry — let me try that again.' }).doc;
+  doc = reduce(doc, { type: 'read', text: 'get_round' }).doc;
+
+  assert.ok(lastRefusal(doc), 'say and read must not clear the refusal');
+  assert.match(renderRound(doc), /already committed this round/);
+});
+
+test('a second refusal does not clear the first — it replaces it', () => {
+  let doc = reduce(createDoc(), { type: 'agent_submit', text: AGENT }).doc;
+  doc = reduce(doc, { type: 'agent_submit', text: 'push one' }).doc;
+  doc = reduce(doc, { type: 'agent_submit', text: 'push two' }).doc;
+  assert.ok(lastRefusal(doc), 'the panel must not blink empty on the second push');
+  assert.match(renderRound(doc), /class="round__refusal"/);
+});
+
+test('the refusal clears when the game actually moves on', () => {
+  let doc = reduce(createDoc(), { type: 'agent_submit', text: AGENT }).doc;
+  doc = reduce(doc, { type: 'agent_submit', text: 'a second answer' }).doc;
+  assert.ok(lastRefusal(doc));
+
+  doc = reduce(doc, { type: 'human_submit', text: HUMAN }).doc;
+  assert.equal(lastRefusal(doc), null, 'an accepted state change clears it');
+  assert.doesNotMatch(renderRound(doc), /class="round__refusal"/);
+});
+
+test('an empty log has no refusal', () => {
+  assert.equal(lastRefusal(createDoc()), null);
+  assert.doesNotMatch(renderRound(createDoc()), /class="round__refusal"/);
+});
+
+/* The one the handoff did not think of. An agent controls the text in `say`,
+   and `say` writes to the same field the panel renders. If the panel ever read
+   the log tail rather than filtering to refusals, an agent could put its own
+   uncommitted answer on the stage in display type. */
+test('the stage never renders agent-authored text from the log', () => {
+  let doc = reduce(createDoc(), { type: 'agent_submit', text: AGENT }).doc;
+  doc = reduce(doc, { type: 'say', text: `my answer is ${AGENT}` }).doc;
+
+  const html = renderRound(doc);
+  assert.ok(!html.includes(AGENT),
+    'a say() reached the stage — the panel must filter to refusals, not take the log tail');
+});
+
+test('a refusal on screen still leaks no answer', () => {
+  let doc = reduce(createDoc(), { type: 'agent_submit', text: AGENT }).doc;
+  doc = reduce(doc, { type: 'agent_submit', text: AGENT }).doc;
+  doc = reduce(doc, { type: 'human_submit', text: HUMAN }).doc;
+  doc = reduce(doc, { type: 'human_submit', text: HUMAN }).doc;
+
+  const html = renderRound(doc);
+  assert.match(html, /class="round__refusal"/, 'the refusal should be showing');
+  assert.ok(!html.includes(AGENT), 'the refusal panel leaked the agent answer');
+  assert.ok(!html.includes(HUMAN), 'the refusal panel leaked the human answer');
+});
+
+test('cyan retires at the reveal, so one card is never in two states', () => {
+  let doc = reduce(createDoc(), { type: 'agent_submit', text: AGENT }).doc;
+  assert.match(renderRound(doc), /card--agent" data-committed="true"/,
+    'a committed card must carry the signal before the reveal');
+
+  doc = reduce(doc, { type: 'human_submit', text: HUMAN }).doc;
+  doc = reduce(doc, { type: 'reveal' }).doc;
+  const html = renderRound(doc);
+  assert.doesNotMatch(html, /data-committed="true"/,
+    'after the reveal the committed halo must retire and leave the moment to amber');
+});

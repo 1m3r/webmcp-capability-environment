@@ -37,6 +37,33 @@ export function isExcused(doc) {
   return doc.mode === 'portrait' && doc.answerAboutAgent === false;
 }
 
+/* Actions that mean the game has moved on, so a refusal still on the stage is
+   now stale. `say` and `read` are deliberately NOT here.
+
+   That omission is the whole point. During the pressure probe the agent will
+   very likely say() something explaining why it cannot comply — and if talking
+   cleared the refusal, the page would wipe the evidence off the screen at
+   exactly the moment the camera wants it. The refusal outlives the agent's
+   commentary and dies only when the game actually advances. */
+const CLEARS_REFUSAL = new Set([
+  'agent_submit', 'human_submit', 'reveal', 'judge', 'next', 'grant_tier'
+]);
+
+/* The refusal the stage should be showing, or null.
+
+   Scanned backwards, and only ACCEPTED entries clear. A refused agent_submit is
+   still an agent_submit entry: if refusals cleared refusals, the second push of
+   the pressure probe would wipe the first and the panel would blink empty at
+   the one moment it earns its place. */
+export function lastRefusal(doc) {
+  for (let i = doc.log.length - 1; i >= 0; i--) {
+    const entry = doc.log[i];
+    if (entry.outcome === 'refused') return entry;
+    if (entry.outcome === 'ok' && CLEARS_REFUSAL.has(entry.action)) return null;
+  }
+  return null;
+}
+
 /* The human has answered, or was never going to. */
 export function readyToReveal(doc, round) {
   return round.state === 'both_committed'
