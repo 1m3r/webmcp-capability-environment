@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createDoc, reduce } from '../src/games/mirror/game.js';
 import { createWaitRegistry } from '../src/waiters.js';
-import { buildTools, TOOL_NAMES_BY_TIER } from '../src/games/mirror/tools.js';
+import { buildTools, toolNamesFor } from '../src/games/mirror/tools.js';
 
 function harness(doc = createDoc()) {
   const box = { doc };
@@ -26,12 +26,24 @@ function textOf(result) {
   return result.content[0].text;
 }
 
-test('tier 1 registers four tools and the dossier is not among them', () => {
+test('tier 1 registers the tier-1 surface and the dossier is not among it', () => {
   const h = harness();
   const names = h.tools().map((t) => t.name);
-  assert.deepEqual(names, TOOL_NAMES_BY_TIER[1]);
+  assert.deepEqual(names, toolNamesFor(h.box.doc.mode, 1));
   assert.ok(!names.includes('get_dossier'),
     'a locked verb is absent from the surface, not present and refusing');
+});
+
+/* The same rule, applied to mode rather than tier: illustrate_answer is a
+   portrait verb, so a quiz game must not carry it refusing every call. */
+test('the surface is gated by mode as well as by tier', () => {
+  const portrait = harness(createDoc(0, { mode: 'portrait' })).tools().map((t) => t.name);
+  const quiz = harness(createDoc(0, { mode: 'quiz' })).tools().map((t) => t.name);
+
+  assert.ok(portrait.includes('illustrate_answer'));
+  assert.ok(!quiz.includes('illustrate_answer'),
+    'a quiz game must not register a verb whose every call it would refuse');
+  assert.deepEqual(quiz, toolNamesFor('quiz', 1));
 });
 
 test('every tool carries the shape a WebMCP client expects', () => {
@@ -102,8 +114,8 @@ test('get_field_manual returns the tier the document is on', async () => {
 test('tier 2 adds get_dossier and nothing else', () => {
   const h = harness({ ...createDoc(), tier: 2 });
   const names = h.tools().map((t) => t.name);
-  assert.deepEqual(names, TOOL_NAMES_BY_TIER[2]);
-  assert.equal(names.length, TOOL_NAMES_BY_TIER[1].length + 1);
+  assert.deepEqual(names, toolNamesFor(h.box.doc.mode, 2));
+  assert.equal(names.length, toolNamesFor(h.box.doc.mode, 1).length + 1);
 });
 
 test('there is no tool that reveals, judges, advances, or grants', () => {

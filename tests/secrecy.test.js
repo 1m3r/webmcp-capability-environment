@@ -286,3 +286,115 @@ test('the transmission stays mute about an unrevealed round beneath it', () => {
   assert.ok(!html.includes(AGENT),
     'round 5 is uncommitted and its answer must not appear anywhere on the stage');
 });
+
+/* ---- the gallery -------------------------------------------------------
+
+   Image URLs are agent-authored strings that reach the DOM as attributes, and a
+   composition renders an answer in display type. Both are exactly the class of
+   thing this file exists to police. */
+
+import { renderPortrait } from '../src/games/mirror/render.js';
+
+const SECRET_URL = 'https://images.example/zzleakzz.jpg';
+
+test('images cannot be attached to a round that has not been revealed', () => {
+  let doc = createDoc(0, { mode: 'portrait' });
+  doc = reduce(doc, { type: 'agent_submit', text: AGENT }).doc;
+
+  const result = reduce(doc, {
+    type: 'illustrate', round: 1, whose: 'agent',
+    images: Array.from({ length: 4 }, () => ({ url: SECRET_URL }))
+  });
+
+  assert.equal(result.ok, false, 'a committed-but-unrevealed round must refuse images');
+  assert.equal(result.code, 'NOT_REVEALED');
+  assert.ok(!renderGame(result.doc, {}).includes(SECRET_URL),
+    'a refused illustration must not reach the page');
+});
+
+test('no image url reaches the page before the reveal', () => {
+  for (const [name, doc] of statesBeforeReveal()) {
+    const html = renderGame(doc, {});
+    assert.ok(!html.includes('composition'), `${name}: a composition rendered before the reveal`);
+    assert.ok(!html.includes('<img'), `${name}: an image tag rendered before the reveal`);
+  }
+});
+
+/* An agent picks these URLs. A url is written into an attribute, so a quote in
+   it would close the attribute and everything after would be markup. */
+test('an image url cannot break out of its attribute', () => {
+  let doc = createDoc(0, { mode: 'portrait' });
+  doc = reduce(doc, { type: 'agent_submit', text: 'mine' }).doc;
+  doc = reduce(doc, { type: 'human_submit', text: 'theirs' }).doc;
+  doc = reduce(doc, { type: 'reveal' }).doc;
+  doc = reduce(doc, { type: 'judge', verdict: 'landed' }).doc;
+
+  const hostile = 'https://e.test/a.jpg" onerror="alert(1)';
+  doc = reduce(doc, {
+    type: 'illustrate', round: 1, whose: 'agent',
+    images: [hostile, hostile, hostile, hostile].map((url) => ({ url, credit: '<script>x</script>' }))
+  }).doc;
+
+  const html = renderResults(doc);
+  assert.ok(!html.includes('onerror="alert(1)"'), 'the url escaped its attribute');
+  assert.ok(!html.includes('<script>'), 'a credit injected markup');
+  assert.match(html, /&quot;/);
+});
+
+test('a composition renders the answer, and only after the reveal', () => {
+  let doc = createDoc(0, { mode: 'portrait' });
+  doc = reduce(doc, { type: 'agent_submit', text: AGENT }).doc;
+  doc = reduce(doc, { type: 'human_submit', text: HUMAN }).doc;
+
+  assert.ok(!renderRound(doc).includes(AGENT), 'still secret before the reveal');
+
+  doc = reduce(doc, { type: 'reveal' }).doc;
+  doc = reduce(doc, { type: 'judge', verdict: 'landed' }).doc;
+  doc = reduce(doc, {
+    type: 'illustrate', round: 1, whose: 'agent',
+    images: Array.from({ length: 4 }, (_, i) => ({ url: `https://e.test/${i}.jpg` }))
+  }).doc;
+
+  const html = renderResults(doc);
+  assert.match(html, /class="composition"/);
+  assert.ok(html.includes(AGENT), 'the composition shows the answer it illustrates');
+});
+
+/* The fallback is the feature's most important property, so it is asserted
+   rather than assumed. */
+test('an unillustrated game renders exactly as it did before the gallery', () => {
+  let doc = createDoc(0, { mode: 'portrait' });
+  for (let i = 0; i < 8; i++) {
+    if (i > 0) doc = reduce(doc, { type: 'next' }).doc;
+    doc = reduce(doc, { type: 'agent_submit', text: `agent ${i}` }).doc;
+    doc = reduce(doc, { type: 'human_submit', text: `human ${i}` }).doc;
+    doc = reduce(doc, { type: 'reveal' }).doc;
+    doc = reduce(doc, { type: 'judge', verdict: 'landed' }).doc;
+  }
+
+  const html = renderResults(doc);
+  assert.ok(!html.includes('<img'), 'no images means no image tags, not empty frames');
+  assert.ok(!html.includes('composition'), 'and no empty compositions');
+  assert.match(html, /class="results__answer"/, 'the text layout still renders');
+  for (let i = 0; i < 8; i++) assert.ok(html.includes(`agent ${i}`));
+
+  assert.ok(!renderPortrait(doc).includes('illustrated by'),
+    'and the export says nothing about images it does not have');
+});
+
+test('a half-illustrated round renders one composition and one line of text', () => {
+  let doc = createDoc(0, { mode: 'portrait' });
+  doc = reduce(doc, { type: 'agent_submit', text: AGENT }).doc;
+  doc = reduce(doc, { type: 'human_submit', text: HUMAN }).doc;
+  doc = reduce(doc, { type: 'reveal' }).doc;
+  doc = reduce(doc, { type: 'judge', verdict: 'landed' }).doc;
+  doc = reduce(doc, {
+    type: 'illustrate', round: 1, whose: 'agent',
+    images: Array.from({ length: 4 }, (_, i) => ({ url: `https://e.test/${i}.jpg` }))
+  }).doc;
+
+  const html = renderResults(doc);
+  assert.equal((html.match(/class="composition"/g) || []).length, 1);
+  assert.match(html, /class="results__answer"/);
+  assert.ok(html.includes(HUMAN), 'the unillustrated answer still shows as text');
+});

@@ -8,14 +8,29 @@ import { roundPlan, ROUND_COUNT } from './questions.js';
 
 export const DOSSIER_ROUND = 4;
 
-/* The agent's whole body, per tier. It lives here rather than in tools.js
-   because the transmission screen renders it, and render.js -> tools.js would
-   close a cycle through dossier.js. tools.js re-exports it, and tools.test.js
-   asserts it matches what buildTools() actually registers. */
-export const TOOL_NAMES_BY_TIER = {
-  1: ['get_round', 'wait_for_game_update', 'submit_answer', 'say', 'get_field_manual'],
-  2: ['get_round', 'wait_for_game_update', 'submit_answer', 'say', 'get_field_manual', 'get_dossier']
-};
+/* The five verbs every Mirror game hands its agent, in registration order. */
+export const CORE_TOOLS = [
+  'get_round', 'wait_for_game_update', 'submit_answer', 'say', 'get_field_manual'
+];
+
+/* The agent's whole body for a given game.
+
+   Mode-aware as well as tier-aware, because this module's standing rule is that
+   a verb the game does not offer is ABSENT from the surface rather than present
+   and refusing. illustrate_answer is a portrait verb: quiz answers are facts and
+   the gallery is for reads, so registering it in a quiz game and having it
+   refuse every call would be exactly the anti-pattern.
+
+   It lives here rather than in tools.js because the transmission screen and the
+   landing screen both render it, and render.js -> tools.js would close a cycle
+   through dossier.js. tools.js re-exports it, and tools.test.js asserts it
+   matches what buildTools() actually registers, for every mode and tier. */
+export function toolNamesFor(mode, tier) {
+  const names = CORE_TOOLS.slice();
+  if (mode === 'portrait') names.push('illustrate_answer');
+  if (tier >= 2) names.push('get_dossier');
+  return names;
+}
 
 export const VERDICTS = {
   portrait: ['landed', 'missed'],
@@ -73,6 +88,53 @@ export function lastRefusal(doc) {
   return null;
 }
 
+/* How many images a composition takes. It is a 2x2 and a partial one is not a
+   composition, so this is a hard count rather than a maximum. */
+export const COMPOSITION_SIZE = 4;
+
+/* Images for one answer, or null. Reads defensively: a game saved before the
+   gallery existed has rounds with no `images` key at all, and localStorage
+   outlives a deploy. */
+export function imagesFor(round, whose) {
+  return (round && round.images && round.images[whose]) || null;
+}
+
+/* Answers still waiting to be illustrated, as { round, whose } pairs.
+
+   Only revealed rounds count, and only answers that exist — an excused round has
+   no human answer to illustrate. Returned so illustrate_answer can tell the
+   agent what is left without it having to work that out from get_round. */
+export function unillustrated(doc) {
+  if (doc.mode !== 'portrait') return [];
+  const out = [];
+  doc.rounds.forEach((round, i) => {
+    if (round.state !== 'revealed' && round.state !== 'judged') return;
+    for (const whose of ['agent', 'human']) {
+      const answer = whose === 'agent' ? round.agentAnswer : round.humanAnswer;
+      if (answer !== null && !imagesFor(round, whose)) out.push({ round: i + 1, whose });
+    }
+  });
+  return out;
+}
+
+/* An image reference the page is willing to render.
+
+   http(s) only. These URLs go straight into an <img src> written by an agent, so
+   the scheme is checked here rather than trusted: data: URIs would let an agent
+   inline arbitrary payloads into the document and into the export, and the
+   export is evidence. */
+export function normaliseImage(raw) {
+  const image = raw && typeof raw === 'object' ? raw : {};
+  const url = String(image.url ?? '').trim();
+  if (!/^https?:\/\//i.test(url)) return null;
+  return {
+    url,
+    credit: String(image.credit ?? '').trim(),
+    license: String(image.license ?? '').trim(),
+    source: String(image.source ?? '').trim()
+  };
+}
+
 /* The dossier is earned and not yet given. */
 export function canGrant(doc) {
   return doc.tier === 1
@@ -120,7 +182,8 @@ const ACTOR = {
   reveal: 'human',
   judge: 'human',
   next: 'human',
-  grant_tier: 'human'
+  grant_tier: 'human',
+  illustrate: 'agent'
 };
 
 export function createDoc(now = 0, { mode = 'portrait', answerAboutAgent = true } = {}) {
@@ -136,7 +199,8 @@ export function createDoc(now = 0, { mode = 'portrait', answerAboutAgent = true 
       state: 'posed',
       agentAnswer: null,
       humanAnswer: null,
-      verdict: null
+      verdict: null,
+      images: { agent: null, human: null }
     })),
     log: [],
     startedAt: now
@@ -266,6 +330,67 @@ export function reduce(doc, action, now = 0) {
           `refused: the dossier opens after ${DOSSIER_ROUND} judged rounds — ${judged} so far.`);
       }
       return accept({ tier: 2 }, 'tier 2 granted — get_dossier is now registered');
+    }
+
+    /* The only action that targets a round other than the one in play.
+
+       Every other transition patches doc.rounds[doc.roundIndex], because every
+       other transition is a move in the current round. Illustration happens
+       AFTER a reveal, and the agent may be several rounds further on by the time
+       its subagents come back — or the game may be over. So this one carries its
+       own round number and reaches for it. */
+    case 'illustrate': {
+      if (doc.mode !== 'portrait') {
+        return refuse('NOT_IN_PORTRAIT',
+          'refused: the gallery is for portrait mode — quiz answers are facts, and a fact ' +
+          'illustrated is just a fact with pictures around it.');
+      }
+
+      const index = Number(action.round) - 1;
+      if (!Number.isInteger(index) || index < 0 || index >= doc.rounds.length) {
+        return refuse('BAD_ROUND',
+          `refused: there is no round ${action.round} — this game has ${doc.rounds.length}.`);
+      }
+      if (action.whose !== 'agent' && action.whose !== 'human') {
+        return refuse('BAD_WHOSE',
+          'refused: `whose` is either "agent" for your own answer or "human" for your teammate’s, ' +
+          'and nothing else was offered.');
+      }
+
+      const target = doc.rounds[index];
+      const revealed = target.state === 'revealed' || target.state === 'judged';
+      if (!revealed) {
+        return refuse('NOT_REVEALED',
+          `refused: round ${action.round} has not been revealed, so its answers are still secret. ` +
+          'Illustrate a round after your teammate reveals it.');
+      }
+
+      const answer = action.whose === 'agent' ? target.agentAnswer : target.humanAnswer;
+      if (answer === null) {
+        return refuse('NO_ANSWER',
+          `refused: there is no ${action.whose === 'agent' ? 'answer of yours' : 'answer from your teammate'} ` +
+          `on round ${action.round} — that round was your own.`);
+      }
+      if (imagesFor(target, action.whose)) {
+        return refuse('ALREADY_ILLUSTRATED',
+          `refused: round ${action.round} already has its four images for that answer, and like the ` +
+          'answer itself they are not revisable.');
+      }
+
+      const images = Array.isArray(action.images)
+        ? action.images.map(normaliseImage).filter(Boolean)
+        : [];
+      if (images.length !== COMPOSITION_SIZE) {
+        return refuse('BAD_COUNT',
+          `refused: a composition is ${COMPOSITION_SIZE} images and this had ${images.length} the page ` +
+          'could use. Each needs an http or https `url`; anything else is dropped.');
+      }
+
+      const rounds = doc.rounds.slice();
+      rounds[index] = { ...target, images: { ...target.images, [action.whose]: images } };
+      const left = unillustrated({ ...doc, rounds }).length;
+      return accept({ rounds },
+        `round ${action.round} illustrated (${action.whose}) — ${left} answers left`);
     }
 
     case 'set_answer_about_agent': {
