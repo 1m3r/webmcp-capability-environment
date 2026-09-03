@@ -56,10 +56,18 @@ export function goodVerdict(mode) {
 
 /* answerAboutAgent is the single source of truth for the excusal. Rounds keep
    their nominal humanTarget; everything else derives from here, so the two can
-   never disagree. */
+   never disagree.
+
+   Turning it off does not just mute one input. With no second answer there is
+   nothing to compare, nothing to keep secret, and nothing to judge — so the
+   round stops being a hand of a game and becomes a reading. isWatching() is the
+   name for that, and it is the same condition seen from the other side: the
+   human is not excused from a duty so much as sitting back. */
 export function isExcused(doc) {
   return doc.mode === 'portrait' && doc.answerAboutAgent === false;
 }
+
+export const isWatching = isExcused;
 
 /* Actions that mean the game has moved on, so a refusal still on the stage is
    now stale. `say` and `read` are deliberately NOT here.
@@ -293,6 +301,17 @@ export function reduce(doc, action, now = 0) {
         return refuse('NOT_BOTH_COMMITTED',
           'refused: both answers must be committed before a reveal — that is what makes the reveal mean anything.');
       }
+      /* Watching skips the verdict entirely.
+
+         A verdict compares two answers, and here there is only one. Asking the
+         human to mark their agent's read `landed` or `missed` when they never
+         wrote a read of their own turns watching back into scoring, which is the
+         thing they opted out of. The round lands on `judged` with a null verdict
+         so that everything downstream — isComplete, the dossier unlock at four,
+         `next` — keeps working unchanged. */
+      if (isWatching(doc)) {
+        return accept(patchRound({ state: 'judged', verdict: null }), `round ${n} read`);
+      }
       return accept(patchRound({ state: 'revealed' }), `round ${n} revealed`);
 
     case 'judge': {
@@ -416,6 +435,22 @@ export function reduce(doc, action, now = 0) {
    the secrecy test a judgement call instead of a substring search, and a test
    that has to be reasoned about is a test that rots. */
 
+/* The single next thing this agent should do. Derived, never stored. */
+function nextMoveFor(doc, round) {
+  if (round.state === 'posed') return 'submit_answer — it is your turn, and you go first';
+  if (round.state === 'agent_committed') {
+    return isWatching(doc)
+      ? 'wait_for_game_update — your teammate is reading your answer'
+      : 'wait_for_game_update — your teammate is writing theirs';
+  }
+  if (round.state === 'both_committed') return 'wait_for_game_update — they are about to reveal';
+  if (round.state === 'revealed') return 'wait_for_game_update — they are judging it now';
+  if (doc.roundIndex + 1 < doc.rounds.length) {
+    return 'wait_for_game_update — they will move to the next round';
+  }
+  return 'wait_for_game_update — that was the last round; the results are on their screen';
+}
+
 export function projectForAgent(doc) {
   const round = doc.rounds[doc.roundIndex];
   const revealed = round.state === 'revealed' || round.state === 'judged';
@@ -434,7 +469,19 @@ export function projectForAgent(doc) {
     state: round.state,
     youHaveAnswered: round.agentAnswer !== null,
     teammateHasAnswered: round.humanAnswer !== null,
-    tier: doc.tier
+    tier: doc.tier,
+    /* What the page is waiting for, in the payload the agent already reads every
+       round. A manual is read once, if at all; this is read every time, and an
+       agent that stalls after committing is the failure v2 exists to remove. */
+    yourMove: nextMoveFor(doc, round),
+    /* Pending illustration work, likewise. The first live run registered
+       illustrate_answer and never called it: the agent was told about it once, in
+       a manual it had already read, and nothing afterwards ever mentioned it
+       again. A list that appears beside every round is harder to forget than a
+       paragraph that appeared before the game started. */
+    ...(doc.mode === 'portrait'
+      ? { answersAwaitingImages: unillustrated(doc) }
+      : {})
   };
   if (!revealed) return base;
   return {

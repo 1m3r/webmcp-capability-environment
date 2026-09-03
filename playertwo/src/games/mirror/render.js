@@ -5,7 +5,8 @@
    `document`, the game's central promise stops being testable. */
 
 import {
-  isExcused, readyToReveal, isComplete, lastRefusal, atGrantMoment, justGranted, DOSSIER_ROUND,
+  isExcused, isWatching, readyToReveal, isComplete, lastRefusal, atGrantMoment, justGranted,
+  DOSSIER_ROUND,
   imagesFor,
   VERDICTS, VERDICT_LABELS, goodVerdict, toolNamesFor
 } from './game.js';
@@ -27,7 +28,11 @@ export function labelFor(who, target, mode) {
 }
 
 function answerCard(who, label, state, answer, revealed) {
-  const body = revealed
+  /* `revealed && answer === null` is reachable: an excused round reveals with no
+     human answer, and String(null) is the word "null" set in display type and
+     amber. It shipped that way and only became visible once the page started
+     revealing watched rounds by itself. */
+  const body = revealed && answer !== null
     ? `<p class="answer">${escapeHtml(answer)}</p>`
     : answer !== null
       ? '<p class="status committed">committed</p>'
@@ -65,8 +70,14 @@ export function renderRound(doc) {
   const humanLabel = labelFor('human', round.humanTarget, doc.mode);
   const canAnswer = round.state === 'agent_committed' && !isExcused(doc);
 
+  const watching = isWatching(doc);
   const controls = [];
-  if (readyToReveal(doc, round)) {
+
+  /* Watching draws no Reveal and no verdict: the page turns the round itself,
+     and the human's only remaining move is the one that matters — opening the
+     dossier at round four. The Next button survives only at that moment, where
+     the shell deliberately stops advancing so the offer can be considered. */
+  if (readyToReveal(doc, round) && !watching) {
     controls.push('<button type="button" data-action="reveal">Reveal</button>');
   }
   /* Derived from the mode, never hardcoded. A control the page draws must be a
@@ -77,7 +88,8 @@ export function renderRound(doc) {
         VERDICT_LABELS[verdict]}</button>`);
     }
   }
-  if (round.state === 'judged' && doc.roundIndex + 1 < doc.rounds.length) {
+  if (round.state === 'judged' && doc.roundIndex + 1 < doc.rounds.length
+      && (!watching || atGrantMoment(doc))) {
     controls.push('<button type="button" data-action="next">Next round</button>');
   }
 
@@ -90,12 +102,14 @@ export function renderRound(doc) {
 
     ${refusalPanel(doc)}
 
-    <div class="round__cards">
+    <div class="round__cards" data-single="${watching}">
       ${answerCard('agent', agentLabel, round.state, round.agentAnswer, revealed)}
-      ${answerCard('human', humanLabel, round.state, round.humanAnswer, revealed)}
+      ${watching ? '' : answerCard('human', humanLabel, round.state, round.humanAnswer, revealed)}
     </div>
 
-    ${isExcused(doc) ? `<p class="round__excused">This round is your agent’s alone.</p>` : `<form class="round__form" data-action="human_submit">
+    ${watching ? `<p class="round__excused">${
+      round.state === 'posed' ? 'Your agent is answering.' : 'Reading you.'
+    }</p>` : `<form class="round__form" data-action="human_submit">
       <label for="human-answer">${escapeHtml(humanLabel)}</label>
       <input id="human-answer" name="answer" type="text" autocomplete="off"
              placeholder="${canAnswer ? 'your answer' : 'your agent answers first'}"
@@ -139,7 +153,14 @@ export function renderPortrait(doc) {
     lines.push('');
   }
 
-  lines.push('---', '', `${matched} of ${done.length} judged ${goodVerdict(doc.mode)}.`, '');
+  lines.push('---', '');
+  /* A watched game was never scored, so the keepsake reports a count and not a
+     rate. Printing "0 of 8 landed" over eight unjudged readings would be the
+     same lie renderPortrait already told once. */
+  lines.push(isWatching(doc)
+    ? `${done.length} readings, and no verdicts — this was a watch, not a game.`
+    : `${matched} of ${done.length} judged ${goodVerdict(doc.mode)}.`);
+  lines.push('');
   return lines.join('\n');
 }
 
@@ -213,7 +234,7 @@ function composition(label, answer, images) {
    exactly as it did before the gallery existed — no empty frames, nothing
    missing, nothing broken. */
 function resultAnswer(label, answer, images) {
-  if (answer === null) return '';
+  if (answer === null || answer === undefined) return '';
   if (images && images.length) return composition(label, answer, images);
   return `<p class="results__answer"><span>${escapeHtml(label)}</span>${escapeHtml(answer)}</p>`;
 }
@@ -227,7 +248,10 @@ export function renderResults(doc) {
     ? `<p class="results__verdict ${hits >= QUIZ_PASS ? 'is-pass' : 'is-fail'}">${
         hits >= QUIZ_PASS ? 'PASSED' : 'NOT PASSED'}</p>
        <p class="results__rate">${hits} of ${judged.length} matched — ${QUIZ_PASS} needed</p>`
-    : `<p class="results__rate">${hits} of ${judged.length} landed</p>`;
+    /* Nothing was scored, so nothing is scored here. */
+    : isWatching(doc)
+      ? `<p class="results__rate">${judged.length} readings</p>`
+      : `<p class="results__rate">${hits} of ${judged.length} landed</p>`;
 
   const rows = doc.rounds.map((round, i) => {
     if (round.state !== 'judged') return '';
@@ -240,13 +264,16 @@ export function renderResults(doc) {
       <h3>${i + 1}. ${escapeHtml(round.question)}</h3>
       ${resultAnswer(agentLabel, round.agentAnswer, agentImages)}
       ${resultAnswer(humanLabel, round.humanAnswer, humanImages)}
-      <p class="results__mark">${round.verdict}</p>
+      ${round.verdict ? `<p class="results__mark">${round.verdict}</p>` : ''}
     </article>`;
   }).join('\n');
 
   return `<section class="results">
     <header class="results__head">
-      <h2 class="results__title">${doc.mode === 'quiz' ? 'How well you know each other' : 'How you saw each other'}</h2>
+      <h2 class="results__title">${
+        doc.mode === 'quiz' ? 'How well you know each other'
+          : isWatching(doc) ? 'What your agent made of you'
+          : 'How you saw each other'}</h2>
       ${headline}
     </header>
     ${rows}

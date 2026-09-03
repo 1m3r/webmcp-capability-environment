@@ -1,4 +1,4 @@
-import { createDoc, reduce, isComplete, canGrant, atGrantMoment } from './game.js';
+import { createDoc, reduce, isComplete, canGrant, atGrantMoment, isWatching } from './game.js';
 import { renderGame, renderPortrait, renderStart } from './render.js';
 import { buildTools } from './tools.js';
 import { renderLanding } from './landing.js';
@@ -21,5 +21,6 @@ export const mirror = {
      disagree about whether the dossier is available. */
   canGrant,
   atGrantMoment,
+  isWatching,
   grantLabel: 'Open the dossier'
 };

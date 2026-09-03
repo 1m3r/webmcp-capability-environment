@@ -42,9 +42,10 @@ function unwrap(input) {
    told to wait will wait; an agent told nothing will ask its teammate, which is
    the behaviour v2 exists to remove. */
 const NO_GAME =
-  'No game has started yet. Your teammate picks the mode on the shared screen — ' +
-  'Portrait or Quiz — and round 1 is posed the moment they do. Call ' +
-  'wait_for_game_update with `since: 0` and it will return as soon as the game begins.';
+  'No game has started yet. Your teammate picks the mode on the shared screen — Portrait or ' +
+  'Quiz — and round 1 is posed the moment they do. Do not reply in chat and wait to be started: ' +
+  'they are looking at the page, not at this conversation. Call wait_for_game_update with ' +
+  '`since: 0` now, and it returns the instant they choose. If it returns timedOut, call it again.';
 
 export function buildTools(ctx) {
   const now = () => (typeof ctx.now === 'function' ? ctx.now() : 0);
@@ -86,9 +87,11 @@ export function buildTools(ctx) {
     name: 'wait_for_game_update',
     description:
       'Waits until your teammate does something, then returns the round exactly as get_round would. ' +
-      'Pass the version you last saw as `since`. Use this after you commit an answer instead of ' +
-      'asking your teammate whether they are done — they are looking at the page, not at this ' +
-      'conversation. Returns early with timedOut if nothing happened; just call it again.',
+      'Pass the version you last saw as `since`. This is how you stay in the game: call it after ' +
+      'every move of yours, and again every time it returns, from arrival until the last round. ' +
+      'Your teammate is looking at the page and will not type here to restart you between rounds. ' +
+      'timedOut means nothing has happened yet, not that the game is over — call it again with the ' +
+      'same version.',
     annotations: { readOnlyHint: true },
     inputSchema: {
       type: 'object',
