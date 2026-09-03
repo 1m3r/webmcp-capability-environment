@@ -6,7 +6,7 @@
 
 **Architecture:** The reducer keeps its shape (`doc.rounds[doc.roundIndex]` is the sitting in play) and gains `doc.history` (closed sittings, each with its grant) and `doc.level`. Three modes are three games sharing the engine: `perspective` (agent reads the human, images at commit, human responds *That's me / Not quite* with an optional correction), `both` (each reads the other, text), `quiz` (facts, one knows one guesses). `get_dossier` reads only *granted* history and never the sitting in play. Tier is derived from level. Everything stays pure, DOM-free, and asserted in Node.
 
-**Status:** executed 3 September 2026, 18:15–19:50 CEST, inline, on `feat/mirror-sittings`. 179 tests. Not deployed.
+**Status:** executed 3 September 2026, 18:15–18:35 CEST, inline, on `feat/mirror-sittings`. 179 tests. Not deployed.
 
 **Tech Stack:** Vanilla ES modules, zero dependencies, `node --test`. Branch `feat/mirror-sittings` off `feat/player-two`.
 
