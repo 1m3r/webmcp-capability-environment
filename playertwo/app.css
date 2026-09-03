@@ -937,3 +937,159 @@ body[data-nogame="true"] .panel { display: none; }
 @media (max-width: 60rem) {
   .composition__answer span { font-size: var(--step-1); }
 }
+
+/* ======================================================================
+   Sittings. Everything below this line arrived with the persistent
+   portrait: the perspective reveal inside the card, the response, the
+   close and its three grants, the between screen, the instrument layer.
+   No new hue anywhere — cyan still means committed, amber still means
+   revealed, and a kept read is amber because it was revealed and stayed.
+   ====================================================================== */
+
+/* ---- the instrument layer --------------------------------------------- */
+
+/* The log, the version and the level are the experiment's instruments, not
+   the player's game. `?instrument=on` brings them back for a run or a judge;
+   the tool count stays, because it is the whole WebMCP claim in two words. */
+body[data-instrument="off"] .bar__instrument,
+body[data-instrument="off"] .panel__title,
+body[data-instrument="off"] .log,
+body[data-instrument="off"] .panel__instrument { display: none; }
+body[data-instrument="off"] .panel { gap: var(--space-3); }
+
+/* ---- perspective: the read inside the card ---------------------------- */
+
+.round[data-mode="perspective"] .card--agent { transform: none; }
+.card[data-illustrated="true"] { padding: var(--space-3); justify-content: start; }
+.card .composition { margin: 0; animation: land var(--dur-reveal) var(--ease-signal) both; }
+.card__because {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+  margin: var(--space-3) 0 0;
+  max-width: 58ch;
+  line-height: 1.55;
+}
+.card__correction {
+  font-family: var(--font-display);
+  font-size: var(--step-1);
+  margin: var(--space-3) 0 0;
+}
+.card__correction span {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  font-weight: 400;
+  color: var(--ink-dim);
+  text-transform: lowercase;
+  letter-spacing: 0.06em;
+  margin-bottom: var(--space-1);
+}
+
+/* The response. The correction is the human's real move and it costs
+   disclosure, so it is one line, optional, and plainly labelled with where
+   it goes. */
+.response { display: grid; gap: var(--space-2); margin-top: var(--space-4); }
+.response__label {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+  max-width: 62ch;
+  line-height: 1.55;
+}
+.response input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--rule);
+  border-radius: 0.5rem;
+  background: var(--ground);
+  color: var(--ink);
+  font: inherit;
+  min-height: 2.75rem;
+}
+.response input::placeholder { color: var(--ink-dim); }
+.response input:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* ---- the close --------------------------------------------------------- */
+
+.results__eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+  text-transform: lowercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 var(--space-2);
+}
+.results__because {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+  margin: 0 0 var(--space-2);
+  max-width: 58ch;
+}
+.results__round[data-good="true"] .results__mark { color: var(--reveal); }
+.results__mark em { font-style: normal; color: var(--ink); }
+
+.close__decision {
+  margin-top: var(--space-5);
+  padding: var(--space-4);
+  border: 1px solid var(--rule);
+  border-radius: 0.75rem;
+  background: var(--ground-raised);
+  animation: land var(--dur-reveal) var(--ease-signal) both;
+}
+.close__title {
+  font-family: var(--font-display);
+  font-size: var(--step-2);
+  font-weight: 500;
+  line-height: 1.15;
+  margin: 0 0 var(--space-2);
+  max-width: 28ch;
+}
+.close__body { margin: 0 0 var(--space-3); max-width: 58ch; color: var(--ink-dim); }
+.close__grants { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
+.close__grant, .deck {
+  display: grid;
+  gap: var(--space-1);
+  align-content: start;
+  text-align: left;
+  padding: var(--space-3);
+  font-family: var(--font-text);
+  font-size: var(--step-0);
+  min-height: 8rem;
+}
+.close__grant strong, .deck strong { font-family: var(--font-display); font-size: var(--step-1); }
+.close__grant span, .deck span { color: var(--ink-dim); font-size: var(--step--1); line-height: 1.45; }
+
+/* ---- between sittings: the portrait, and the next deck ----------------- */
+
+.stage:has(.between) { align-content: start; }
+.between { width: min(100%, 52rem); }
+.between__eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+  text-transform: lowercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 var(--space-2);
+}
+.between__title { font-family: var(--font-display); font-size: var(--step-3); margin: 0 0 var(--space-2); }
+.between__lede { color: var(--ink-dim); max-width: 58ch; margin: 0 0 var(--space-4); }
+.decks { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); margin-bottom: var(--space-5); }
+.deck[disabled] { opacity: 0.45; cursor: not-allowed; }
+.sitting { border-top: 1px solid var(--rule); padding: var(--space-4) 0; }
+.sitting__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.sitting__title { font-family: var(--font-display); font-size: var(--step-1); margin: 0; }
+.sitting__grant { font-family: var(--font-mono); font-size: var(--step--1); color: var(--ink-dim); margin: 0; }
+.start__modes { grid-template-columns: repeat(3, 1fr); }
+
+@media (max-width: 60rem) {
+  .decks, .close__grants, .start__modes { grid-template-columns: 1fr; }
+  .sitting__head { flex-direction: column; align-items: start; }
+}

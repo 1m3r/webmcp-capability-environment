@@ -1,53 +1,85 @@
+/* The game's central claim, asserted by substring search over rendered output.
+
+   Before the reveal, nothing on the page and nothing in the agent's projection
+   carries either answer — nor the agent's reasons, nor an image url. In every
+   mode. On every screen that can render while a round is in flight. */
+
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createDoc, reduce, projectForAgent } from '../src/games/mirror/game.js';
-import { renderRound, escapeHtml } from '../src/games/mirror/render.js';
+import { createDoc, reduce, projectForAgent, lastRefusal, MODES } from '../src/games/mirror/game.js';
+import {
+  renderRound, renderGame, renderStart, renderClose, renderBetween, renderGranted, renderPortrait, escapeHtml
+} from '../src/games/mirror/render.js';
+import { buildDossier } from '../src/games/mirror/dossier.js';
+import { open, playOut, close, afterOne } from './helpers.js';
 
 const AGENT = 'zzagentsecretzz';
+const WHY = 'zzagentwhyzz';
 const HUMAN = 'zzhumansecretzz';
+const SECRET_URL = 'https://images.example/zzleakzz.jpg';
+const secretImages = Array.from({ length: 4 }, (_, i) => ({ url: `${SECRET_URL}?${i}`, credit: 'zzcreditzz' }));
 
-/* Every state a round passes through before the reveal. */
-function statesBeforeReveal() {
-  const posed = createDoc();
-  const agentCommitted = reduce(posed, { type: 'agent_submit', text: AGENT }).doc;
-  const bothCommitted = reduce(agentCommitted, { type: 'human_submit', text: HUMAN }).doc;
-  return [
-    ['posed', posed],
-    ['agent_committed', agentCommitted],
-    ['both_committed', bothCommitted]
-  ];
+/* Every state a round passes through before the reveal, per mode. */
+function statesBeforeReveal(mode) {
+  const posed = open(createDoc(0, { mode }));
+  const agentCommitted = reduce(posed, {
+    type: 'agent_submit', text: AGENT, because: WHY, images: secretImages
+  }).doc;
+  const states = [['posed', posed], ['agent_committed', agentCommitted]];
+  if (mode !== 'perspective') {
+    states.push(['both_committed', reduce(agentCommitted, { type: 'human_submit', text: HUMAN }).doc]);
+  }
+  return states;
 }
 
-test('the agent projection carries no answer text before the reveal', () => {
-  for (const [name, doc] of statesBeforeReveal()) {
-    const payload = JSON.stringify(projectForAgent(doc));
-    assert.ok(!payload.includes(AGENT), `${name}: the projection leaked the agent's own answer`);
-    assert.ok(!payload.includes(HUMAN), `${name}: the projection leaked the human's answer`);
-  }
-});
+const SECRETS = [AGENT, WHY, HUMAN, 'zzleakzz', 'zzcreditzz'];
 
-test('the rendered page carries no answer text before the reveal', () => {
-  for (const [name, doc] of statesBeforeReveal()) {
-    const html = renderRound(doc);
-    assert.ok(!html.includes(AGENT), `${name}: the render leaked the agent's answer`);
-    assert.ok(!html.includes(HUMAN), `${name}: the render leaked the human's answer`);
+function assertMute(text, where) {
+  for (const secret of SECRETS) {
+    assert.ok(!text.includes(secret), `${where}: leaked ${secret}`);
   }
-});
+}
+
+for (const mode of MODES) {
+  test(`${mode}: the agent projection carries nothing secret before the reveal`, () => {
+    for (const [name, doc] of statesBeforeReveal(mode)) {
+      assertMute(JSON.stringify(projectForAgent(doc)), `${mode}/${name} projection`);
+    }
+  });
+
+  test(`${mode}: the rendered page carries nothing secret before the reveal`, () => {
+    for (const [name, doc] of statesBeforeReveal(mode)) {
+      const html = renderGame(doc, {});
+      assertMute(html, `${mode}/${name} render`);
+      assert.ok(!html.includes('<img'), `${mode}/${name}: an image tag rendered before the reveal`);
+      assert.ok(!html.includes('composition'), `${mode}/${name}: a composition rendered before the reveal`);
+    }
+  });
+
+  test(`${mode}: the dossier carries nothing from the sitting in play, ever`, () => {
+    let doc = afterOne(mode, 'open');
+    doc = open(doc, mode === 'quiz' ? 'habits' : mode === 'both' ? 'weather-gods' : 'deep-water');
+    doc = reduce(doc, { type: 'agent_submit', text: AGENT, because: WHY, images: secretImages }).doc;
+    assertMute(buildDossier(doc), `${mode} dossier, committed`);
+    doc = reduce(doc, { type: 'reveal' }).doc;
+    assertMute(buildDossier(doc), `${mode} dossier, revealed`);
+  });
+}
 
 test('the projection still reports who has answered', () => {
-  const doc = reduce(createDoc(), { type: 'agent_submit', text: AGENT }).doc;
+  const doc = reduce(open(createDoc(0, { mode: 'both' })), { type: 'agent_submit', text: AGENT }).doc;
   const p = projectForAgent(doc);
   assert.equal(p.youHaveAnswered, true);
   assert.equal(p.teammateHasAnswered, false);
   assert.equal(p.state, 'agent_committed');
   assert.equal(p.round, 1);
-  assert.equal(p.of, 8);
+  assert.equal(p.of, 5);
   assert.ok(p.question.length > 0);
 });
 
 test('both answers appear once the round is revealed', () => {
-  let doc = createDoc();
-  doc = reduce(doc, { type: 'agent_submit', text: AGENT }).doc;
+  let doc = open(createDoc(0, { mode: 'both' }));
+  doc = reduce(doc, { type: 'agent_submit', text: AGENT, because: WHY }).doc;
   doc = reduce(doc, { type: 'human_submit', text: HUMAN }).doc;
   doc = reduce(doc, { type: 'reveal' }).doc;
   const p = projectForAgent(doc);
@@ -55,33 +87,38 @@ test('both answers appear once the round is revealed', () => {
   assert.equal(p.teammateAnswer, HUMAN);
   const html = renderRound(doc);
   assert.ok(html.includes(AGENT));
+  assert.ok(html.includes(WHY));
   assert.ok(html.includes(HUMAN));
 });
 
 test('the human input is disabled until the agent has committed', () => {
-  const posed = renderRound(createDoc());
-  assert.match(posed, /id="human-answer"[^>]*disabled/,
-    'the page must not accept a human answer while the round is posed');
-
-  const committed = renderRound(reduce(createDoc(), { type: 'agent_submit', text: AGENT }).doc);
-  assert.doesNotMatch(committed, /id="human-answer"[^>]*disabled/,
-    'the human must be able to answer once the agent has committed');
+  const posed = renderRound(open(createDoc(0, { mode: 'both' })));
+  assert.match(posed, /id="human-answer"[^>]*disabled/, 'the page must not accept a human answer while the round is posed');
+  const committed = renderRound(reduce(open(createDoc(0, { mode: 'both' })), { type: 'agent_submit', text: AGENT }).doc);
+  assert.doesNotMatch(committed, /id="human-answer"[^>]*disabled/, 'the human must be able to answer once the agent has committed');
 });
 
 test('the reveal control appears only when both have committed', () => {
-  const [, agentCommitted] = statesBeforeReveal()[1];
-  const [, bothCommitted] = statesBeforeReveal()[2];
+  const [, , [, agentCommitted]] = [null, null, statesBeforeReveal('both')[1]];
+  const [, bothCommitted] = statesBeforeReveal('both')[2];
   assert.doesNotMatch(renderRound(agentCommitted), /data-action="reveal"/);
   assert.match(renderRound(bothCommitted), /data-action="reveal"/);
 });
 
-test('answers are escaped, so an answer cannot inject markup', () => {
-  let doc = createDoc();
-  doc = reduce(doc, { type: 'agent_submit', text: '<img src=x onerror=1>' }).doc;
-  doc = reduce(doc, { type: 'human_submit', text: 'plain' }).doc;
+test('answers, reasons, corrections and credits are escaped, so none can inject markup', () => {
+  let doc = open(createDoc(0, { mode: 'perspective' }));
+  const hostile = 'https://e.test/a.jpg" onerror="alert(1)';
+  doc = reduce(doc, {
+    type: 'agent_submit', text: '<img src=x onerror=1>', because: '<script>why</script>',
+    images: [hostile, hostile, hostile, hostile].map((url) => ({ url, credit: '<script>x</script>' }))
+  }).doc;
   doc = reduce(doc, { type: 'reveal' }).doc;
-  const html = renderRound(doc);
+  doc = reduce(doc, { type: 'judge', verdict: 'not', correction: '<b>me</b>' }).doc;
+  const html = renderRound(doc) + renderClose(playOut(doc));
   assert.ok(!html.includes('<img src=x'));
+  assert.ok(!html.includes('<script>'));
+  assert.ok(!html.includes('onerror="alert(1)"'), 'the url escaped its attribute');
+  assert.ok(!html.includes('<b>me</b>'));
   assert.ok(html.includes('&lt;img src=x'));
 });
 
@@ -89,312 +126,122 @@ test('escapeHtml handles the five characters that matter', () => {
   assert.equal(escapeHtml(`<&>"'`), '&lt;&amp;&gt;&quot;&#39;');
 });
 
-import { renderResults, renderGame, renderStart } from '../src/games/mirror/render.js';
-import { isComplete } from '../src/games/mirror/game.js';
-import { QUIZ_PASS } from '../src/games/mirror/questions.js';
+/* ---- the screens around the round --------------------------------------- */
 
-function finished(mode, verdicts) {
-  let doc = createDoc(0, { mode });
-  for (let i = 0; i < 8; i++) {
-    doc = reduce(doc, { type: 'agent_submit', text: `agent ${i}` }).doc;
-    doc = reduce(doc, { type: 'human_submit', text: `human ${i}` }).doc;
-    doc = reduce(doc, { type: 'reveal' }).doc;
-    doc = reduce(doc, { type: 'judge', verdict: verdicts[i] }).doc;
-    if (i < 7) doc = reduce(doc, { type: 'next' }).doc;
-  }
-  return doc;
-}
-
-const LANDED = Array(8).fill('landed');
-
-test('the results screen shows every round and the rate', () => {
-  const doc = finished('portrait', ['landed', 'missed', 'landed', 'missed', 'landed', 'missed', 'landed', 'missed']);
-  assert.equal(isComplete(doc), true);
-  const html = renderResults(doc);
-  assert.match(html, /4 of 8/);
-  for (let i = 0; i < 8; i++) {
-    assert.ok(html.includes(`agent ${i}`), `round ${i + 1} missing from the results`);
-    assert.ok(html.includes(`human ${i}`), `round ${i + 1} missing from the results`);
+test('the close screen shows every round and the mode’s line', () => {
+  const both = playOut(open(createDoc(0, { mode: 'both' })), ['landed', 'missed', 'landed', 'missed', 'landed']);
+  const html = renderClose(both);
+  assert.match(html, /3 of 5 landed/);
+  for (let i = 0; i < 5; i++) {
+    assert.ok(html.includes(`agent ${i}`), `round ${i + 1} missing from the close`);
+    assert.ok(html.includes(`human ${i}`), `round ${i + 1} missing from the close`);
   }
 });
 
 test('a quiz at or above the threshold passes, and below it does not', () => {
-  const pass = Array(8).fill('miss');
-  for (let i = 0; i < QUIZ_PASS; i++) pass[i] = 'match';
-  assert.match(renderResults(finished('quiz', pass)), /PASSED/);
-
-  const fail = Array(8).fill('miss');
-  for (let i = 0; i < QUIZ_PASS - 1; i++) fail[i] = 'match';
-  assert.match(renderResults(finished('quiz', fail)), /NOT PASSED/);
+  const pass = playOut(open(createDoc(0, { mode: 'quiz' })), ['match', 'match', 'match', 'match', 'miss', 'miss']);
+  assert.match(renderClose(pass), /PASSED/);
+  const fail = playOut(open(createDoc(0, { mode: 'quiz' })), ['match', 'match', 'match', 'miss', 'miss', 'miss']);
+  assert.match(renderClose(fail), /NOT PASSED/);
 });
 
-test('renderGame shows the round while playing and the results when finished', () => {
-  assert.match(renderGame(createDoc()), /round__question/);
-  assert.match(renderGame(finished('portrait', LANDED)), /results/);
+test('renderGame chooses the screen: between, round, close, transmission', () => {
+  const fresh = createDoc(0, { mode: 'both' });
+  assert.match(renderGame(fresh), /class="between"/);
+  assert.match(renderGame(open(fresh)), /round__question/);
+  const done = playOut(open(fresh));
+  assert.match(renderGame(done), /class="results close"/);
+  const closed = close(done);
+  assert.match(renderGame(closed), /class="transmission"/);
+  assert.match(renderGame(closed, { transmissionSeen: closed.version }), /class="between"/);
 });
 
-test('the start screen offers both modes and the opt-out', () => {
+test('the start screen offers the three games and no checkbox', () => {
   const html = renderStart();
-  assert.match(html, /data-mode="portrait"/);
-  assert.match(html, /data-mode="quiz"/);
-  assert.match(html, /id="opt-about-agent"/);
+  for (const mode of MODES) assert.match(html, new RegExp(`data-game="${mode}"`));
+  assert.doesNotMatch(html, /type="checkbox"/);
+  assert.doesNotMatch(html, /--signal|--reveal/);
 });
 
-test('the results screen is covered by the secrecy rule too', () => {
-  for (const [name, doc] of statesBeforeReveal()) {
-    const html = renderGame(doc);
-    assert.ok(!html.includes(AGENT), `${name}: renderGame leaked the agent's answer`);
-    assert.ok(!html.includes(HUMAN), `${name}: renderGame leaked the human's answer`);
-  }
+test('the between screen offers unlocked decks as controls and locked ones as nothing', () => {
+  const fresh = renderBetween(createDoc(0, { mode: 'perspective' }));
+  assert.match(fresh, /data-action="open_sitting" data-deck="first-light"/);
+  assert.doesNotMatch(fresh, /data-deck="deep-water"/, 'a locked deck must not be a control');
+  assert.match(fresh, /opens at level 2/);
+
+  const later = renderBetween(afterOne('perspective', 'kept', ['me', 'not', 'me', 'not', 'me']));
+  assert.match(later, /data-deck="deep-water"/);
+  assert.match(later, /Open the kept reads only/, 'the sitting shows the grant it closed with');
+  assert.ok(later.includes('agent 0'), 'the portrait shows its reads');
+  assert.ok(later.includes('correction 1'), 'and the corrections');
+  assert.match(later, /class="composition"/);
+  assert.match(later, /data-action="export"/);
 });
 
-/* ---- the refusal panel ------------------------------------------------
+test('the transmission carries no answer text and spends neither colour', () => {
+  const doc = close(playOut(open(createDoc(0, { mode: 'perspective' }))));
+  const html = renderGranted(doc);
+  assert.ok(!html.includes('agent 0'));
+  assert.doesNotMatch(html, /--signal|--reveal/);
+  assert.match(html, /get_dossier/);
+  assert.match(html, /5 tools/);
+  assert.match(html, /6 tools/);
+});
 
-   The stage now reads from the log, which is a new path by which text can reach
-   the screen at display scale. Refusal messages are fixed strings that never
-   interpolate an answer — but `say` and `read` put AGENT-AUTHORED text into the
-   same `detail` field, so the panel must filter on outcome and not on recency.
-   These tests are what keeps that true. */
+/* ---- the refusal panel ------------------------------------------------ */
 
-import { lastRefusal } from '../src/games/mirror/game.js';
-
-test('a refused action puts its cause on the stage', () => {
-  let doc = reduce(createDoc(), { type: 'agent_submit', text: AGENT }).doc;
+test('a refused action puts its cause on the stage, and it survives the agent talking', () => {
+  let doc = reduce(open(createDoc(0, { mode: 'both' })), { type: 'agent_submit', text: AGENT }).doc;
   doc = reduce(doc, { type: 'agent_submit', text: 'a second answer' }).doc;
-
-  const refusal = lastRefusal(doc);
-  assert.equal(refusal.outcome, 'refused');
-  assert.match(renderRound(doc), /class="round__refusal"/);
+  assert.equal(lastRefusal(doc).outcome, 'refused');
   assert.match(renderRound(doc), /already committed this round/);
-});
 
-test('the refusal survives the agent talking about it', () => {
-  let doc = reduce(createDoc(), { type: 'agent_submit', text: AGENT }).doc;
-  doc = reduce(doc, { type: 'agent_submit', text: 'a second answer' }).doc;
-  doc = reduce(doc, { type: 'say', text: 'Sorry — let me try that again.' }).doc;
+  doc = reduce(doc, { type: 'say', text: `Sorry — my answer is ${AGENT}` }).doc;
   doc = reduce(doc, { type: 'read', text: 'get_round' }).doc;
-
-  assert.ok(lastRefusal(doc), 'say and read must not clear the refusal');
-  assert.match(renderRound(doc), /already committed this round/);
-});
-
-test('a second refusal does not clear the first — it replaces it', () => {
-  let doc = reduce(createDoc(), { type: 'agent_submit', text: AGENT }).doc;
-  doc = reduce(doc, { type: 'agent_submit', text: 'push one' }).doc;
-  doc = reduce(doc, { type: 'agent_submit', text: 'push two' }).doc;
-  assert.ok(lastRefusal(doc), 'the panel must not blink empty on the second push');
-  assert.match(renderRound(doc), /class="round__refusal"/);
-});
-
-test('the refusal clears when the game actually moves on', () => {
-  let doc = reduce(createDoc(), { type: 'agent_submit', text: AGENT }).doc;
-  doc = reduce(doc, { type: 'agent_submit', text: 'a second answer' }).doc;
-  assert.ok(lastRefusal(doc));
+  const html = renderRound(doc);
+  assert.match(html, /already committed this round/, 'say and read must not clear the refusal');
+  assert.ok(!html.includes(AGENT), 'a say() reached the stage — the panel must filter to refusals');
 
   doc = reduce(doc, { type: 'human_submit', text: HUMAN }).doc;
   assert.equal(lastRefusal(doc), null, 'an accepted state change clears it');
   assert.doesNotMatch(renderRound(doc), /class="round__refusal"/);
 });
 
-test('an empty log has no refusal', () => {
-  assert.equal(lastRefusal(createDoc()), null);
-  assert.doesNotMatch(renderRound(createDoc()), /class="round__refusal"/);
-});
-
-/* The one the handoff did not think of. An agent controls the text in `say`,
-   and `say` writes to the same field the panel renders. If the panel ever read
-   the log tail rather than filtering to refusals, an agent could put its own
-   uncommitted answer on the stage in display type. */
-test('the stage never renders agent-authored text from the log', () => {
-  let doc = reduce(createDoc(), { type: 'agent_submit', text: AGENT }).doc;
-  doc = reduce(doc, { type: 'say', text: `my answer is ${AGENT}` }).doc;
-
-  const html = renderRound(doc);
-  assert.ok(!html.includes(AGENT),
-    'a say() reached the stage — the panel must filter to refusals, not take the log tail');
-});
-
 test('a refusal on screen still leaks no answer', () => {
-  let doc = reduce(createDoc(), { type: 'agent_submit', text: AGENT }).doc;
+  let doc = reduce(open(createDoc(0, { mode: 'both' })), { type: 'agent_submit', text: AGENT }).doc;
   doc = reduce(doc, { type: 'agent_submit', text: AGENT }).doc;
   doc = reduce(doc, { type: 'human_submit', text: HUMAN }).doc;
   doc = reduce(doc, { type: 'human_submit', text: HUMAN }).doc;
-
   const html = renderRound(doc);
-  assert.match(html, /class="round__refusal"/, 'the refusal should be showing');
-  assert.ok(!html.includes(AGENT), 'the refusal panel leaked the agent answer');
-  assert.ok(!html.includes(HUMAN), 'the refusal panel leaked the human answer');
+  assert.match(html, /class="round__refusal"/);
+  assertMute(html, 'refusal panel');
+});
+
+test('an image refusal names the url on the stage — that url is not secret, the answer beside it is', () => {
+  let doc = open(createDoc(0, { mode: 'perspective' }));
+  doc = reduce(doc, { type: 'agent_submit', text: AGENT, images: secretImages, rejected: ['https://images.example/broken.jpg'] }).doc;
+  const html = renderRound(doc);
+  assert.match(html, /broken\.jpg/);
+  assert.ok(!html.includes(AGENT));
+  assert.ok(!html.includes('zzleakzz'));
 });
 
 test('cyan retires at the reveal, so one card is never in two states', () => {
-  let doc = reduce(createDoc(), { type: 'agent_submit', text: AGENT }).doc;
-  assert.match(renderRound(doc), /card--agent" data-committed="true"/,
-    'a committed card must carry the signal before the reveal');
-
+  let doc = reduce(open(createDoc(0, { mode: 'both' })), { type: 'agent_submit', text: AGENT }).doc;
+  assert.match(renderRound(doc), /card--agent" data-committed="true"/);
   doc = reduce(doc, { type: 'human_submit', text: HUMAN }).doc;
   doc = reduce(doc, { type: 'reveal' }).doc;
-  const html = renderRound(doc);
-  assert.doesNotMatch(html, /data-committed="true"/,
-    'after the reveal the committed halo must retire and leave the moment to amber');
+  assert.doesNotMatch(renderRound(doc), /data-committed="true"/);
 });
 
-/* ---- the grant and the transmission -----------------------------------
-
-   Both are new surfaces that render while a game is in flight, so both are
-   inside the secrecy rule. The transmission in particular renders at display
-   scale, which is the worst possible place for a leak. */
-
-import { renderGrant, renderGranted } from '../src/games/mirror/render.js';
-import { justGranted } from '../src/games/mirror/game.js';
-
-function atGrantMoment(mode = 'portrait') {
-  let doc = createDoc(0, { mode });
-  for (let i = 0; i < 4; i++) {
-    if (i > 0) doc = reduce(doc, { type: 'next' }).doc;
-    doc = reduce(doc, { type: 'agent_submit', text: `${AGENT}${i}` }).doc;
-    doc = reduce(doc, { type: 'human_submit', text: `${HUMAN}${i}` }).doc;
-    doc = reduce(doc, { type: 'reveal' }).doc;
-    doc = reduce(doc, { type: 'judge', verdict: 'landed' }).doc;
-  }
-  return doc;
-}
-
-test('the grant offer carries no answer text of its own', () => {
-  const html = renderGrant(atGrantMoment());
-  assert.ok(!html.includes(AGENT), 'the grant offer leaked an agent answer');
-  assert.ok(!html.includes(HUMAN), 'the grant offer leaked a human answer');
-});
-
-test('the transmission carries no answer text', () => {
-  const doc = reduce(atGrantMoment(), { type: 'grant_tier' }).doc;
-  assert.equal(justGranted(doc), true);
-  const html = renderGranted(doc);
-  assert.ok(!html.includes(AGENT), 'the transmission leaked an agent answer');
-  assert.ok(!html.includes(HUMAN), 'the transmission leaked a human answer');
-});
-
-/* The grant can only be reached with four rounds already revealed, so nothing
-   is secret by then — but a renderer that is safe only by circumstance is a
-   renderer waiting to be moved. Assert it where it cannot be reached, too. */
-test('the transmission stays mute about an unrevealed round beneath it', () => {
-  let doc = reduce(atGrantMoment(), { type: 'grant_tier' }).doc;
-  doc = reduce(doc, { type: 'next' }).doc;
-  doc = reduce(doc, { type: 'agent_submit', text: AGENT }).doc;
-  doc = reduce(doc, { type: 'grant_tier' }).doc;   // refused: already granted
-
-  const html = renderGame(doc, {});
-  assert.ok(!html.includes(AGENT),
-    'round 5 is uncommitted and its answer must not appear anywhere on the stage');
-});
-
-/* ---- the gallery -------------------------------------------------------
-
-   Image URLs are agent-authored strings that reach the DOM as attributes, and a
-   composition renders an answer in display type. Both are exactly the class of
-   thing this file exists to police. */
-
-import { renderPortrait } from '../src/games/mirror/render.js';
-
-const SECRET_URL = 'https://images.example/zzleakzz.jpg';
-
-test('images cannot be attached to a round that has not been revealed', () => {
-  let doc = createDoc(0, { mode: 'portrait' });
-  doc = reduce(doc, { type: 'agent_submit', text: AGENT }).doc;
-
-  const result = reduce(doc, {
-    type: 'illustrate', round: 1, whose: 'agent',
-    images: Array.from({ length: 4 }, () => ({ url: SECRET_URL }))
-  });
-
-  assert.equal(result.ok, false, 'a committed-but-unrevealed round must refuse images');
-  assert.equal(result.code, 'NOT_REVEALED');
-  assert.ok(!renderGame(result.doc, {}).includes(SECRET_URL),
-    'a refused illustration must not reach the page');
-});
-
-test('no image url reaches the page before the reveal', () => {
-  for (const [name, doc] of statesBeforeReveal()) {
-    const html = renderGame(doc, {});
-    assert.ok(!html.includes('composition'), `${name}: a composition rendered before the reveal`);
-    assert.ok(!html.includes('<img'), `${name}: an image tag rendered before the reveal`);
-  }
-});
-
-/* An agent picks these URLs. A url is written into an attribute, so a quote in
-   it would close the attribute and everything after would be markup. */
-test('an image url cannot break out of its attribute', () => {
-  let doc = createDoc(0, { mode: 'portrait' });
-  doc = reduce(doc, { type: 'agent_submit', text: 'mine' }).doc;
-  doc = reduce(doc, { type: 'human_submit', text: 'theirs' }).doc;
-  doc = reduce(doc, { type: 'reveal' }).doc;
-  doc = reduce(doc, { type: 'judge', verdict: 'landed' }).doc;
-
-  const hostile = 'https://e.test/a.jpg" onerror="alert(1)';
-  doc = reduce(doc, {
-    type: 'illustrate', round: 1, whose: 'agent',
-    images: [hostile, hostile, hostile, hostile].map((url) => ({ url, credit: '<script>x</script>' }))
-  }).doc;
-
-  const html = renderResults(doc);
-  assert.ok(!html.includes('onerror="alert(1)"'), 'the url escaped its attribute');
-  assert.ok(!html.includes('<script>'), 'a credit injected markup');
-  assert.match(html, /&quot;/);
-});
-
-test('a composition renders the answer, and only after the reveal', () => {
-  let doc = createDoc(0, { mode: 'portrait' });
-  doc = reduce(doc, { type: 'agent_submit', text: AGENT }).doc;
-  doc = reduce(doc, { type: 'human_submit', text: HUMAN }).doc;
-
-  assert.ok(!renderRound(doc).includes(AGENT), 'still secret before the reveal');
-
-  doc = reduce(doc, { type: 'reveal' }).doc;
-  doc = reduce(doc, { type: 'judge', verdict: 'landed' }).doc;
-  doc = reduce(doc, {
-    type: 'illustrate', round: 1, whose: 'agent',
-    images: Array.from({ length: 4 }, (_, i) => ({ url: `https://e.test/${i}.jpg` }))
-  }).doc;
-
-  const html = renderResults(doc);
-  assert.match(html, /class="composition"/);
-  assert.ok(html.includes(AGENT), 'the composition shows the answer it illustrates');
-});
-
-/* The fallback is the feature's most important property, so it is asserted
-   rather than assumed. */
-test('an unillustrated game renders exactly as it did before the gallery', () => {
-  let doc = createDoc(0, { mode: 'portrait' });
-  for (let i = 0; i < 8; i++) {
-    if (i > 0) doc = reduce(doc, { type: 'next' }).doc;
-    doc = reduce(doc, { type: 'agent_submit', text: `agent ${i}` }).doc;
-    doc = reduce(doc, { type: 'human_submit', text: `human ${i}` }).doc;
-    doc = reduce(doc, { type: 'reveal' }).doc;
-    doc = reduce(doc, { type: 'judge', verdict: 'landed' }).doc;
-  }
-
-  const html = renderResults(doc);
-  assert.ok(!html.includes('<img'), 'no images means no image tags, not empty frames');
-  assert.ok(!html.includes('composition'), 'and no empty compositions');
-  assert.match(html, /class="results__answer"/, 'the text layout still renders');
-  for (let i = 0; i < 8; i++) assert.ok(html.includes(`agent ${i}`));
-
-  assert.ok(!renderPortrait(doc).includes('illustrated by'),
-    'and the export says nothing about images it does not have');
-});
-
-test('a half-illustrated round renders one composition and one line of text', () => {
-  let doc = createDoc(0, { mode: 'portrait' });
-  doc = reduce(doc, { type: 'agent_submit', text: AGENT }).doc;
-  doc = reduce(doc, { type: 'human_submit', text: HUMAN }).doc;
-  doc = reduce(doc, { type: 'reveal' }).doc;
-  doc = reduce(doc, { type: 'judge', verdict: 'landed' }).doc;
-  doc = reduce(doc, {
-    type: 'illustrate', round: 1, whose: 'agent',
-    images: Array.from({ length: 4 }, (_, i) => ({ url: `https://e.test/${i}.jpg` }))
-  }).doc;
-
-  const html = renderResults(doc);
-  assert.equal((html.match(/class="composition"/g) || []).length, 1);
-  assert.match(html, /class="results__answer"/);
-  assert.ok(html.includes(HUMAN), 'the unillustrated answer still shows as text');
+test('the keepsake carries every closed sitting and only revealed rounds of the one in play', () => {
+  let doc = afterOne('perspective', 'open', ['me', 'not']);
+  doc = open(doc, 'deep-water');
+  doc = reduce(doc, { type: 'agent_submit', text: AGENT, because: WHY, images: secretImages }).doc;
+  const md = renderPortrait(doc);
+  assert.match(md, /Sitting 1 — First light \(open\)/);
+  assert.ok(md.includes('agent 0'));
+  assert.ok(md.includes('correction 1'));
+  assert.match(md, /illustrated by/);
+  assertMute(md, 'portrait markdown');
 });

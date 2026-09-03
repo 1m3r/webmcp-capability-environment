@@ -12,29 +12,27 @@
       <h1 class="bar__mark">MIRROR</h1>
       <p class="bar__status">
         <span id="s-entry">no model context</span> ·
-        <span id="s-tools" class="bar__tools">0 tools</span> ·
-        <span id="s-tier">tier 1</span> ·
-        <span id="s-version">v1</span>
+        <span id="s-tools" class="bar__tools">0 tools</span><span class="bar__instrument"> ·
+        <span id="s-tier">no game</span> ·
+        <span id="s-version">v0</span></span>
       </p>
     </header>
 
     <main id="stage" class="stage" aria-live="polite"></main>
 
     <aside class="panel">
-      <h2 class="panel__title">Shared log</h2>
-      <ol id="log" class="log"></ol>
       <div class="panel__controls">
-        <label id="panel-opt" class="panel__opt" hidden>
-          <input type="checkbox" id="panel-opt-input" checked>
-          answer about my agent
-        </label>
-        <button type="button" id="grant" hidden>Open the dossier</button>
-        <button type="button" id="export">Export</button>
-        <button type="button" id="restart">Restart</button>
+        <button type="button" id="export" hidden>Export</button>
+        <button type="button" id="abandon" hidden>Abandon sitting</button>
+        <button type="button" id="games" hidden>Other games</button>
+        <button type="button" id="forget" class="panel__instrument" hidden>Forget this portrait</button>
       </div>
       <p class="panel__note">
-        The reveal, the verdict and the dossier are yours. Your agent has no tool for any of them.
+        The reveal, your response, the close and what your agent keeps are yours.
+        It has no tool for any of them.
       </p>
+      <h2 class="panel__title">Shared log</h2>
+      <ol id="log" class="log"></ol>
     </aside>
 
     <script type="module" src="src/ui/shell.js"></script>

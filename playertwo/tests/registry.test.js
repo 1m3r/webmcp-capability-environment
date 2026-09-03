@@ -14,7 +14,9 @@ test('mirror registers and comes back out', () => {
   assert.equal(get('warren'), null);
 });
 
-test('canGrant is false until four rounds are judged', () => {
-  const doc = mirror.createDoc();
-  assert.equal(mirror.canGrant(doc), false);
+test('mirror keeps one portrait per game, under its own key', () => {
+  const keys = mirror.modes.map((mode) => mirror.storageKeyFor(mode));
+  assert.equal(new Set(keys).size, mirror.modes.length, 'two games must never share a key');
+  assert.ok(keys.every((k) => k !== mirror.storageKey), 'the active pointer is not a portrait');
+  assert.ok(keys.every((k) => k.includes('v2')), 'a new schema gets a new key; old games die rather than migrate');
 });

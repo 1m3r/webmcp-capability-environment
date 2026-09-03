@@ -5,8 +5,8 @@
    reading five tools — the agent's whole body, none of which can reveal, judge
    or advance.
 
-   Both assume tools register on arrival. A fresh page has no saved game, so
-   `doc` is null until the human picks a mode on the start screen, and every
+   Both assume tools register on arrival. A fresh page has no saved portrait, so
+   `doc` is null until the human picks a game on the start screen, and every
    tool reads through ctx.getDoc(). These tests pin the arrival path. */
 
 import { test } from 'node:test';
@@ -14,7 +14,7 @@ import assert from 'node:assert/strict';
 import { buildTools } from '../src/games/mirror/tools.js';
 import { registerTools } from '../src/webmcp.js';
 import { createWaitRegistry } from '../src/waiters.js';
-import { createDoc } from '../src/games/mirror/game.js';
+import { createDoc, reduce } from '../src/games/mirror/game.js';
 
 /* shell.js's ctx, in the state boot() finds it in on a fresh page. */
 function arrivingCtx() {
@@ -22,7 +22,9 @@ function arrivingCtx() {
   return {
     getDoc: () => doc,
     setDoc: (next) => { doc = next; },
-    start: (mode) => { doc = createDoc(0, { mode }); },
+    start: (mode) => {
+      doc = reduce(createDoc(0, { mode }), { type: 'open_sitting', deckId: mode === 'quiz' ? 'daily' : mode === 'both' ? 'voices' : 'first-light' }).doc;
+    },
     now: () => 0,
     waits: createWaitRegistry()
   };
@@ -40,10 +42,8 @@ test('registration reports five tools on arrival', async () => {
   const registered = [];
   const mc = { registerTool: async (t) => { registered.push(t.name); } };
   const result = await registerTools(mc, buildTools(arrivingCtx()));
-
   assert.deepEqual(result.errors, [], 'registration must not error on a fresh page');
-  assert.equal(result.registered, 5,
-    'the status bar reads this number, and the video opens on it');
+  assert.equal(result.registered, 5, 'the status bar reads this number, and the video opens on it');
 });
 
 /* Every tool is reachable the moment it is registered, so every tool must have
@@ -58,7 +58,7 @@ test('every tool answers helpfully before a game exists', async () => {
     const out = await tool.execute(input, {});
     const body = out.content.map((c) => c.text).join('');
     assert.ok(body.length > 0, `${tool.name} returned nothing`);
-    assert.match(body, /no game|not started|pick|chooses|mode/i,
+    assert.match(body, /no game|not started|pick|chooses|game/i,
       `${tool.name} should say a game has not started, and said: ${body.slice(0, 120)}`);
   }
 });
@@ -68,19 +68,26 @@ test('an agent that arrives early can wait for the game to start', async () => {
   const wait = buildTools(ctx).find((t) => t.name === 'wait_for_game_update');
 
   const pending = wait.execute({ since: 0, timeout_ms: 2000 }, {});
-  /* The human picks a mode on the start screen; shell.js notifies the registry. */
-  setTimeout(() => { ctx.start('portrait'); ctx.waits.notify(ctx.getDoc().version); }, 20);
+  /* The human picks a game and opens a sitting; shell.js notifies the registry. */
+  setTimeout(() => { ctx.start('perspective'); ctx.waits.notify(ctx.getDoc().version); }, 20);
 
   const out = await pending;
   const body = out.content.map((c) => c.text).join('');
-  assert.doesNotMatch(body, /timedOut/,
-    'the wait must wake when the game starts, not sit until its timeout');
+  assert.doesNotMatch(body, /timedOut/, 'the wait must wake when the game starts, not sit until its timeout');
   assert.match(body, /"round": 1/, 'and it must return the first round');
 });
 
 test('the manual is readable before a game exists', async () => {
   const manual = buildTools(arrivingCtx()).find((t) => t.name === 'get_field_manual');
   const body = (await manual.execute({}, {})).content.map((c) => c.text).join('');
-  assert.match(body, /YOU ANSWER FIRST/,
-    'an agent reading the manual on arrival must still learn the ordering');
+  assert.match(body, /YOU ANSWER FIRST/, 'an agent reading the manual on arrival must still learn the ordering');
+});
+
+test('the submit schema is shaped by the game once one exists', () => {
+  const ctx = arrivingCtx();
+  const before = buildTools(ctx).find((t) => t.name === 'submit_answer');
+  assert.ok(!('images' in before.inputSchema.properties), 'no game, no slot yet');
+  ctx.start('perspective');
+  const after = buildTools(ctx).find((t) => t.name === 'submit_answer');
+  assert.ok('images' in after.inputSchema.properties, 'the slot arrives with the game');
 });

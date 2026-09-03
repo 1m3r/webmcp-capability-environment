@@ -1,10 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createDoc, reduce } from '../src/games/mirror/game.js';
+import { createDoc, reduce, MODES } from '../src/games/mirror/game.js';
 import { createWaitRegistry } from '../src/waiters.js';
 import { buildTools, toolNamesFor } from '../src/games/mirror/tools.js';
+import { open, afterOne } from './helpers.js';
 
-function harness(doc = createDoc()) {
+function harness(doc = open(createDoc(0, { mode: 'both' }))) {
   const box = { doc };
   const waits = createWaitRegistry();
   const ctx = {
@@ -26,24 +27,22 @@ function textOf(result) {
   return result.content[0].text;
 }
 
-test('tier 1 registers the tier-1 surface and the dossier is not among it', () => {
-  const h = harness();
-  const names = h.tools().map((t) => t.name);
-  assert.deepEqual(names, toolNamesFor(h.box.doc.mode, 1));
-  assert.ok(!names.includes('get_dossier'),
-    'a locked verb is absent from the surface, not present and refusing');
+test('tier 1 registers five verbs in every game, and the dossier is not among them', () => {
+  for (const mode of MODES) {
+    const names = harness(createDoc(0, { mode })).tools().map((t) => t.name);
+    assert.deepEqual(names, toolNamesFor(mode, 1));
+    assert.equal(names.length, 5, `${mode}: the status bar reads 5 tools on arrival`);
+    assert.ok(!names.includes('get_dossier'), 'a locked verb is absent from the surface, not present and refusing');
+    assert.ok(!names.includes('illustrate_answer'), 'the gallery verb is gone — images travel with the answer');
+  }
 });
 
-/* The same rule, applied to mode rather than tier: illustrate_answer is a
-   portrait verb, so a quiz game must not carry it refusing every call. */
-test('the surface is gated by mode as well as by tier', () => {
-  const portrait = harness(createDoc(0, { mode: 'portrait' })).tools().map((t) => t.name);
-  const quiz = harness(createDoc(0, { mode: 'quiz' })).tools().map((t) => t.name);
-
-  assert.ok(portrait.includes('illustrate_answer'));
-  assert.ok(!quiz.includes('illustrate_answer'),
-    'a quiz game must not register a verb whose every call it would refuse');
-  assert.deepEqual(quiz, toolNamesFor('quiz', 1));
+test('tier 2 adds get_dossier and nothing else, in every game', () => {
+  for (const mode of MODES) {
+    const names = harness(afterOne(mode)).tools().map((t) => t.name);
+    assert.deepEqual(names, toolNamesFor(mode, 2));
+    assert.equal(names.length, 6);
+  }
 });
 
 test('every tool carries the shape a WebMCP client expects', () => {
@@ -88,9 +87,16 @@ test('get_round returns the projection and hides the answers', async () => {
   assert.ok(!out.includes('zzsecretzz'));
   const parsed = JSON.parse(out);
   assert.equal(parsed.youHaveAnswered, true);
-  assert.equal(parsed.of, 8);
+  assert.equal(parsed.of, 5);
   assert.equal(h.box.doc.log.at(-1).action, 'read');
   assert.equal(h.box.doc.log.at(-1).detail, 'get_round');
+});
+
+test('between sittings, get_round says so and names the wait', async () => {
+  const h = harness(createDoc(0, { mode: 'both' }));
+  const parsed = JSON.parse(textOf(await byName(h.tools(), 'get_round').execute({})));
+  assert.equal(parsed.state, 'between_sittings');
+  assert.match(parsed.yourMove, /wait_for_game_update/);
 });
 
 test('say reaches the log with the agent as actor', async () => {
@@ -101,27 +107,26 @@ test('say reaches the log with the agent as actor', async () => {
   assert.equal(h.box.doc.log.at(-1).actor, 'agent');
 });
 
-test('get_field_manual returns the tier the document is on', async () => {
-  const h = harness();
-  const one = textOf(await byName(h.tools(), 'get_field_manual').execute({}));
+test('get_field_manual returns the tier the portrait is on', async () => {
+  const one = textOf(await byName(harness().tools(), 'get_field_manual').execute({}));
   assert.doesNotMatch(one, /get_dossier/);
-
-  h.box.doc = { ...h.box.doc, tier: 2 };
-  const two = textOf(await byName(h.tools(), 'get_field_manual').execute({}));
+  const two = textOf(await byName(harness(afterOne('both')).tools(), 'get_field_manual').execute({}));
   assert.match(two, /get_dossier/);
 });
 
-test('tier 2 adds get_dossier and nothing else', () => {
-  const h = harness({ ...createDoc(), tier: 2 });
-  const names = h.tools().map((t) => t.name);
-  assert.deepEqual(names, toolNamesFor(h.box.doc.mode, 2));
-  assert.equal(names.length, toolNamesFor(h.box.doc.mode, 1).length + 1);
+test('get_dossier reads granted history', async () => {
+  const h = harness(afterOne('both', 'open'));
+  const out = textOf(await byName(h.tools(), 'get_dossier').execute({}));
+  assert.match(out, /agent 0/);
+  assert.equal(h.box.doc.log.at(-1).detail, 'get_dossier');
 });
 
-test('there is no tool that reveals, judges, advances, or grants', () => {
-  const h = harness({ ...createDoc(), tier: 2 });
-  const names = h.tools().map((t) => t.name);
-  for (const forbidden of ['reveal', 'judge', 'next', 'next_round', 'grant_tier', 'unlock', 'answer_for_human']) {
+test('there is no tool that reveals, judges, advances, opens, closes or grants', () => {
+  const names = harness(afterOne('both')).tools().map((t) => t.name);
+  for (const forbidden of [
+    'reveal', 'judge', 'next', 'next_round', 'grant_tier', 'unlock', 'answer_for_human',
+    'open_sitting', 'close_sitting', 'abandon_sitting', 'restart'
+  ]) {
     assert.ok(!names.includes(forbidden), `${forbidden} must never be a tool — it is the human's move`);
   }
 });

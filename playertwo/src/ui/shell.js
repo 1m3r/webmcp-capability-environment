@@ -14,6 +14,11 @@ const game = get('mirror');
 const el = (id) => document.getElementById(id);
 const stage = el('stage');
 const waits = createWaitRegistry();
+const params = new URLSearchParams(location.search);
+
+/* The instruments — the log, the version, the tier — are the experiment's, not
+   the player's. Off by default; `?instrument=on` for a run or a judge. */
+document.body.dataset.instrument = params.get('instrument') === 'on' ? 'on' : 'off';
 
 let doc = load();
 let found = null;
@@ -21,38 +26,16 @@ let registration = { method: 'none', registered: 0, errors: [] };
 let registeredNames = [];
 
 /* The one number the shell holds that is not in the document. The transmission
-   fires on the version that granted the tier and is dismissed by matching it,
+   fires on the version that flipped the tier and is dismissed by matching it,
    so a dismissal costs no state field and leaves no event in the journey. */
 let transmissionSeen = null;
 
-/* The grant offer renders below round 4 rather than replacing it, which is
-   right — you keep the reveal you just earned — but on a laptop it lands past
-   the fold. Scrolled into view once, on the render where it first appears, so
-   it cannot be missed and does not fight the page on every render after. */
-let grantWasOffered = false;
-
-/* How long a revealed answer stays on screen before the page turns the round
-   itself. Watching is meant to be watchable: advancing the instant the agent
-   commits would flash the answer and move on, and the whole point of the mode is
-   that you get to read what it said about you. */
-const READING_BEAT_MS = 3200;
-let readingTimer = null;
-
 /* Which screen the stage is currently showing. The stage scrolls internally, so
-   a new screen inherits the last one's scroll offset — after the grant offer
-   scrolls to the bottom, the transmission that replaces it renders above the
-   fold and the moment happens off-screen. Reset when this changes. */
+   a new screen inherits the last one's scroll offset. Reset when this changes. */
 let lastScreen = null;
 
 /* How long the page has been waiting on the agent, in tiers the CSS reads.
-
-   This is the async surface the game actually has, and it had one state. The
-   agent may answer in two seconds or may have stopped playing altogether, and a
-   human who cannot tell the difference will sit and watch a card that looks
-   identical either way. Test 1 was exactly that failure.
-
-   Presentational only: a data attribute on the stage, no document mutation, so
-   nothing here reaches the reducer, the export or the run record. */
+   Presentational only: a data attribute on the stage, no document mutation. */
 const WAIT_LONG_MS = 20000;
 const WAIT_STALLED_MS = 60000;
 let waitingSince = null;
@@ -74,6 +57,7 @@ function stampWait() {
    so it measures the agent's silence and not the human's deliberation. */
 function trackWaiting() {
   const posed = Boolean(doc)
+    && game.inSitting(doc)
     && !game.isComplete(doc)
     && doc.rounds[doc.roundIndex].state === 'posed';
   if (!posed) {
@@ -90,19 +74,50 @@ const LINKS = {
   videoUrl: ''
 };
 
+/* ---- storage: one portrait per game ---------------------------------- */
+
+function readPortrait(mode) {
+  try {
+    const raw = localStorage.getItem(game.storageKeyFor(mode));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    /* A portrait saved under an older schema is not migrated; it dies. */
+    return parsed && parsed.schema === 2 ? parsed : null;
+  } catch { return null; }
+}
+
 function load() {
   try {
-    const raw = localStorage.getItem(game.storageKey);
-    if (raw) return JSON.parse(raw);
+    const active = localStorage.getItem(game.storageKey);
+    if (active && game.modes.includes(active)) return readPortrait(active);
   } catch { /* a corrupt or blocked store starts fresh rather than failing */ }
-  return null;   // no game yet: the start screen decides the mode
+  return null;   // no game chosen: the start screen decides
 }
 
 function save() {
   if (!doc) return;
   try {
-    localStorage.setItem(game.storageKey, JSON.stringify(doc));
+    localStorage.setItem(game.storageKeyFor(doc.mode), JSON.stringify(doc));
+    localStorage.setItem(game.storageKey, doc.mode);
   } catch { /* private mode: the game still plays, it just will not survive a reload */ }
+}
+
+/* ---- the boundary the tools write through --------------------------- */
+
+/* Loads one image the way the page will render it — same referrer policy — and
+   answers whether it painted. This is the check that turns a broken link into
+   a refusal the agent can act on, instead of an empty frame the human finds
+   later. Bounded, because a host that never answers is a failure too. */
+const IMAGE_TIMEOUT_MS = 8000;
+function loadImage(url) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const timer = setTimeout(() => resolve(false), IMAGE_TIMEOUT_MS);
+    img.referrerPolicy = 'no-referrer';
+    img.onload = () => { clearTimeout(timer); resolve(true); };
+    img.onerror = () => { clearTimeout(timer); resolve(false); };
+    img.src = url;
+  });
 }
 
 /* The tools read and write through here, so a tool call and a click land in the
@@ -110,37 +125,47 @@ function save() {
 const ctx = {
   getDoc: () => doc,
   setDoc: (next) => {
-    const tierBefore = doc.tier;
+    const tierBefore = game.tierFor(doc);
     doc = next;
     save();
-    settleWatch();
+    settlePerspective();
     render();
     waits.notify(doc.version);
-    if (doc.tier !== tierBefore) syncTools();
+    if (game.tierFor(doc) !== tierBefore) syncTools();
   },
   now: () => Date.now(),
-  waits
+  waits,
+  loadImage
 };
 
-/* A refusal needs no special handling here: it is in the document's log like
-   every other event, and renderRound puts the current one on the stage. There
-   used to be a sidebar flash as well — two surfaces for one event, one of them
-   on a six-second timer that could expire mid-demo. */
 function dispatch(action) {
   const result = game.reduce(doc, action, Date.now());
   ctx.setDoc(result.doc);
 }
 
-/* The shared log is where the agent's voice reaches the screen its teammate is
-   actually looking at, and it was rendering `say` identically to `read` — the one
-   thing addressed to a person, styled like a machine event.
+/* Perspective reveals on commit: there is no second answer to wait for, so the
+   gate that protects one has nothing to protect. Called from setDoc AND from
+   boot, because a reload lands on whatever was saved. Runs before render(), so
+   the page never paints a card reading `committed` that it is about to open. */
+function settlePerspective() {
+  if (!doc || !game.isPerspective(doc) || !game.inSitting(doc)) return;
+  if (doc.rounds[doc.roundIndex].state !== 'agent_committed') return;
+  const revealed = game.reduce(doc, { type: 'reveal' }, Date.now());
+  if (revealed.ok) {
+    doc = revealed.doc;
+    save();
+  }
+}
 
-   Three registers now: speech is set as speech, refusals keep the warm red they
-   already had, and the mechanical traffic recedes to what it is, a record. The
-   empty state says what will appear rather than showing an empty box. */
+function transmissionShowing() {
+  return Boolean(doc) && game.justGranted(doc) && transmissionSeen !== doc.version;
+}
+
+/* ---- rendering ---------------------------------------------------------- */
+
 function renderLog() {
   const node = el('log');
-  if (doc.log.length === 0) {
+  if (!doc || doc.log.length === 0) {
     node.innerHTML = `<li class="log__empty">Nothing yet. Anything your agent says
       out loud lands here — it is looking at this page, not at your chat.</li>`;
     return;
@@ -168,91 +193,24 @@ function renderStatus() {
   document.body.dataset.nogame = String(!doc);
   el('s-entry').textContent = found ? found.entry : 'no model context';
   el('s-tools').textContent = `${registration.registered} tools`;
-  el('s-tier').textContent = doc ? `tier ${doc.tier}` : 'no game';
+  el('s-tier').textContent = doc ? `level ${doc.level}` : 'no game';
   el('s-version').textContent = doc ? `v${doc.version}` : 'v0';
-  const grant = el('grant');
-  grant.hidden = !doc || !game.canGrant(doc);
-  grant.textContent = game.grantLabel;
-  const opt = el('panel-opt');
-  opt.hidden = !doc || doc.mode !== 'portrait';
-  /* Nothing to export and nothing to restart until a game exists. */
   el('export').hidden = !doc;
-  el('restart').hidden = !doc;
-  if (doc) el('panel-opt-input').checked = doc.answerAboutAgent !== false;
-}
-
-/* Watching reveals on commit: there is no second answer to wait for, so the gate
-   that protects one has nothing to protect.
-
-   Called from setDoc AND from boot, because a reload lands on whatever was
-   saved. Without the boot call, refreshing mid-round would leave a watched game
-   sitting on `agent_committed` with no Reveal button to press — the page having
-   taken the control away and then not used it.
-
-   Runs before render(), so the page never paints a card reading `committed` that
-   it is about to open anyway. */
-function settleWatch() {
-  if (!doc || !game.isWatching(doc)) return;
-  if (doc.rounds[doc.roundIndex].state !== 'agent_committed') return;
-  const revealed = game.reduce(doc, { type: 'reveal' }, Date.now());
-  if (revealed.ok) {
-    doc = revealed.doc;
-    save();
-  }
-}
-
-/* The transmission is showing. One predicate, read by the renderer and by the
-   thing that must not interrupt it, so the two cannot disagree about whether a
-   moment is currently on screen. */
-function transmissionShowing() {
-  return Boolean(doc) && game.justGranted(doc) && transmissionSeen !== doc.version;
-}
-
-/* In watch mode the page turns its own rounds.
-
-   With no second answer there is nothing to wait for, so Reveal and the verdict
-   are ceremony and the human should not have to click through eight rounds of
-   them. The agent commits, the reducer reveals straight to `judged`, the answer
-   holds for a beat, and the page advances — so the run paces itself at whatever
-   speed the agent thinks.
-
-   Three deliberate stops. At the grant moment it does NOT advance: that is the
-   one decision left to the human in this mode, and hurrying past it would take
-   away the only authority they still hold. It does not advance while the
-   transmission is on screen either — granting clears atGrantMoment, so without
-   this the page would schedule a round turn behind the moment it just earned and
-   dismiss it, unread, after one beat, leaving its Continue button decorative.
-   And it never advances past the last round, because that is the results screen.
-
-   The agent gains nothing here. It still has no tool that reveals or advances;
-   the page is doing it, which is the same hand that always did. */
-function advanceIfWatching() {
-  clearTimeout(readingTimer);
-  if (!doc || !game.isWatching(doc)) return;
-
-  const round = doc.rounds[doc.roundIndex];
-  if (round.state !== 'judged') return;
-  if (doc.roundIndex + 1 >= doc.rounds.length) return;
-  if (game.atGrantMoment(doc)) return;
-  if (transmissionShowing()) return;
-
-  readingTimer = setTimeout(() => dispatch({ type: 'next' }), READING_BEAT_MS);
+  el('abandon').hidden = !doc || !game.inSitting(doc);
+  el('games').hidden = !doc;
+  el('forget').hidden = !doc;
 }
 
 /* A judge arriving in ordinary Chrome gets the landing screen instead of a
-   start screen that leads to a game which cannot take its first turn. Only when
-   there is nothing to resume — a saved game still belongs to whoever saved it —
-   and ?play=1 opts out so the page can be developed without the flag. */
+   start screen that leads to a game which cannot take its first turn. */
 function showLanding() {
-  return !found
-    && !doc
-    && new URLSearchParams(location.search).get('play') !== '1';
+  return !found && !doc && params.get('play') !== '1';
 }
 
 function render() {
   if (showLanding()) {
     stage.innerHTML = game.renderLanding(LINKS);
-    el('log').innerHTML = '';
+    renderLog();
     renderStatus();
     return;
   }
@@ -261,63 +219,53 @@ function render() {
       entry: found ? found.entry : null,
       tools: registration.registered
     });
-    el('log').innerHTML = '';
+    renderLog();
     renderStatus();
     return;
   }
   const screen = transmissionShowing() ? 'transmission'
-    : game.isComplete(doc) ? 'results'
-    : `round-${doc.roundIndex}`;
+    : !game.inSitting(doc) ? `between-${doc.history.length}`
+    : game.isComplete(doc) ? 'close'
+    : `round-${doc.history.length}-${doc.roundIndex}`;
 
   stage.innerHTML = game.render(doc, { transmissionSeen });
   renderLog();
   renderStatus();
 
-  /* A new screen starts at its top. Only the grant offer overrides this, just
-     below, because it is an addition to a round already being read. */
   if (screen !== lastScreen) stage.scrollTop = 0;
   lastScreen = screen;
 
   trackWaiting();
-
-  advanceIfWatching();
-
-  const offered = game.atGrantMoment(doc);
-  if (offered && !grantWasOffered) {
-    /* Deferred a frame so the stage has laid out and knows its scrollHeight.
-       Scrolling the stage to its end rather than calling scrollIntoView on the
-       panel: the offer is the last thing in the stage, and an explicit target
-       cannot be clamped or interrupted the way a centred scroll was. */
-    requestAnimationFrame(() => {
-      /* Instant, not smooth. A smooth scroll on this element is unreliable
-         across browsers — it was observed animating back to 0 — and a demo
-         cannot depend on it. The round stays above; scroll up to re-read it. */
-      stage.scrollTo({ top: stage.scrollHeight, behavior: 'auto' });
-    });
-  }
-  grantWasOffered = offered;
 }
 
 /* ---- human input. None of this exists as a tool. --------------------- */
 
+function chooseGame(mode) {
+  doc = readPortrait(mode) || game.createDoc(Date.now(), { mode });
+  transmissionSeen = null;
+  lastScreen = null;
+  save();
+  settlePerspective();
+  render();
+  waits.notify(doc.version);
+  syncTools();
+}
+
 stage.addEventListener('click', (event) => {
-  const mode = event.target.closest('[data-mode]');
-  if (mode) {
-    const answerAboutAgent = document.getElementById('opt-about-agent')?.checked !== false;
-    doc = game.createDoc(Date.now(), { mode: mode.dataset.mode, answerAboutAgent });
-    save();
-    render();
-    syncTools();
-    return;
-  }
+  const pick = event.target.closest('[data-game]');
+  if (pick) { chooseGame(pick.dataset.game); return; }
   if (!doc) return;
   const button = event.target.closest('[data-action]');
   if (!button || button.tagName !== 'BUTTON') return;
   const action = button.dataset.action;
   if (action === 'reveal') dispatch({ type: 'reveal' });
-  if (action === 'judge') dispatch({ type: 'judge', verdict: button.dataset.verdict });
+  if (action === 'judge') {
+    const correction = stage.querySelector('#correction');
+    dispatch({ type: 'judge', verdict: button.dataset.verdict, correction: correction ? correction.value : '' });
+  }
   if (action === 'next') dispatch({ type: 'next' });
-  if (action === 'grant') dispatch({ type: 'grant_tier' });
+  if (action === 'open_sitting') dispatch({ type: 'open_sitting', deckId: button.dataset.deck });
+  if (action === 'close_sitting') dispatch({ type: 'close_sitting', grant: button.dataset.grant });
   /* Not a reducer action: dismissing the transmission changes nothing about the
      game, and an event for it would be noise in the run record. */
   if (action === 'dismiss') { transmissionSeen = doc.version; render(); }
@@ -333,25 +281,42 @@ stage.addEventListener('submit', (event) => {
   input.value = '';
 });
 
-el('grant').addEventListener('click', () => dispatch({ type: 'grant_tier' }));
-
-el('panel-opt-input').addEventListener('change', (event) => {
-  dispatch({ type: 'set_answer_about_agent', value: event.target.checked });
-});
-
-el('restart').addEventListener('click', () => {
-  if (doc && doc.log.length > 0 &&
-      !confirm('Restart wipes every answer and the whole log. There is no undo. Continue?')) return;
+/* Back to the three games. The portrait stays saved; only the pointer clears. */
+el('games').addEventListener('click', () => {
   doc = null;
   transmissionSeen = null;
-  grantWasOffered = false;
   lastScreen = null;
   waitingSince = null;
-  clearTimeout(readingTimer);
   clearTimeout(waitTimer);
   try { localStorage.removeItem(game.storageKey); } catch { /* nothing to clear */ }
   waits.notify(0);   // release any agent waiting on a version that will never come
   render();
+  syncTools();
+});
+
+/* Abandon throws away the sitting in play and nothing else. */
+el('abandon').addEventListener('click', () => {
+  if (!doc || !game.inSitting(doc)) return;
+  if (!confirm('Abandon this sitting? Its rounds are lost. Everything already closed stays.')) return;
+  dispatch({ type: 'abandon_sitting' });
+});
+
+/* The only way to lose a portrait, and it asks twice by being an instrument
+   control: it is hidden unless ?instrument=on. */
+el('forget').addEventListener('click', () => {
+  if (!doc) return;
+  if (!confirm('Forget this whole portrait — every sitting, every read? There is no undo.')) return;
+  const mode = doc.mode;
+  doc = null;
+  transmissionSeen = null;
+  lastScreen = null;
+  try {
+    localStorage.removeItem(game.storageKeyFor(mode));
+    localStorage.removeItem(game.storageKey);
+  } catch { /* nothing to clear */ }
+  waits.notify(0);
+  render();
+  syncTools();
 });
 
 function exportGame() {
@@ -384,10 +349,8 @@ async function syncTools() {
 }
 
 async function boot() {
-  /* detect() first, then render once. Rendering before detection would show the
-     start screen for a frame and then replace it with the landing screen. */
   found = detect();
-  settleWatch();
+  settlePerspective();
   render();
   if (!found) {
     renderStatus();

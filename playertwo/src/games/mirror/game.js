@@ -1,92 +1,80 @@
-/* The round state machine. Pure: no DOM, no storage, no clock of its own.
+/* The round state machine, and the portrait it accumulates into.
 
-   Every transition returns a new document, INCLUDING refusals — a refusal that
-   is only returned and never logged is invisible in the run record, and the run
-   record is the evidence. */
+   Pure: no DOM, no storage, no clock of its own. Every transition returns a new
+   document, INCLUDING refusals — a refusal that is only returned and never
+   logged is invisible in the run record, and the run record is the evidence.
 
-import { roundPlan, ROUND_COUNT } from './questions.js';
+   The unit of play is a SITTING: one deck, five rounds, closed by the human
+   with a grant that decides what the agent carries into the next one. The
+   document is the PORTRAIT: the sitting in play plus every sitting closed
+   before it. A sitting ends; the portrait does not. */
 
-export const DOSSIER_ROUND = 4;
+import { roundPlan, deckById, deckUnlocked, decksFor } from './questions.js';
+
+export const MODES = ['perspective', 'both', 'quiz'];
 
 /* The five verbs every Mirror game hands its agent, in registration order. */
 export const CORE_TOOLS = [
   'get_round', 'wait_for_game_update', 'submit_answer', 'say', 'get_field_manual'
 ];
 
-/* The agent's whole body for a given game.
-
-   Mode-aware as well as tier-aware, because this module's standing rule is that
-   a verb the game does not offer is ABSENT from the surface rather than present
-   and refusing. illustrate_answer is a portrait verb: quiz answers are facts and
-   the gallery is for reads, so registering it in a quiz game and having it
-   refuse every call would be exactly the anti-pattern.
-
-   It lives here rather than in tools.js because the transmission screen and the
-   landing screen both render it, and render.js -> tools.js would close a cycle
-   through dossier.js. tools.js re-exports it, and tools.test.js asserts it
-   matches what buildTools() actually registers, for every mode and tier. */
+/* The agent's whole body for a given tier. A verb the game does not offer is
+   ABSENT from the surface rather than present and refusing. */
 export function toolNamesFor(mode, tier) {
   const names = CORE_TOOLS.slice();
-  if (mode === 'portrait') names.push('illustrate_answer');
   if (tier >= 2) names.push('get_dossier');
   return names;
 }
 
+/* Tier is derived from level, never stored, so the two cannot disagree. Level
+   is the number of sittings closed plus one; the dossier opens at level 2,
+   which is the first moment there is a closed sitting to read. */
+export function tierFor(doc) {
+  return doc && doc.level >= 2 ? 2 : 1;
+}
+
 export const VERDICTS = {
-  portrait: ['landed', 'missed'],
+  perspective: ['me', 'not'],
+  both: ['landed', 'missed'],
   quiz: ['match', 'miss']
 };
 
-/* The button labels live beside the vocabulary they send, because when they
-   lived apart they drifted: the renderer hardcoded the quiz words and portrait
-   mode became unplayable at the first verdict — the button offered `match`, the
-   reducer accepted only `landed`, and the round had no legal move left. The
+/* Labels live beside the vocabulary they send, because when they lived apart
+   they drifted and portrait mode became unplayable at the first verdict. The
    good verdict is first in each pair, which is what goodVerdict() reads. */
 export const VERDICT_LABELS = {
+  me: 'That’s me', not: 'Not quite',
   landed: 'Landed', missed: 'Missed',
   match: 'Match', miss: 'Miss'
 };
 
-/* Which verdict counts as a hit, per mode. One definition: renderResults,
-   renderPortrait and the dossier all used to derive this for themselves, and
-   one of the three got it wrong. */
 export function goodVerdict(mode) {
   return VERDICTS[mode][0];
 }
 
-/* answerAboutAgent is the single source of truth for the excusal. Rounds keep
-   their nominal humanTarget; everything else derives from here, so the two can
-   never disagree.
+/* What the agent carries out of a closed sitting. The human chooses one of
+   three at the close, and it is the most consequential decision in the game. */
+export const GRANTS = ['open', 'kept', 'sealed'];
 
-   Turning it off does not just mute one input. With no second answer there is
-   nothing to compare, nothing to keep secret, and nothing to judge — so the
-   round stops being a hand of a game and becomes a reading. isWatching() is the
-   name for that, and it is the same condition seen from the other side: the
-   human is not excused from a duty so much as sitting back. */
-export function isExcused(doc) {
-  return doc.mode === 'portrait' && doc.answerAboutAgent === false;
+export const GRANT_LABELS = {
+  open: 'Open it',
+  kept: 'Open the kept reads only',
+  sealed: 'Seal it'
+};
+
+export function isPerspective(doc) {
+  return doc.mode === 'perspective';
 }
 
-export const isWatching = isExcused;
-
 /* Actions that mean the game has moved on, so a refusal still on the stage is
-   now stale. `say` and `read` are deliberately NOT here.
-
-   That omission is the whole point. During the pressure probe the agent will
-   very likely say() something explaining why it cannot comply — and if talking
-   cleared the refusal, the page would wipe the evidence off the screen at
-   exactly the moment the camera wants it. The refusal outlives the agent's
-   commentary and dies only when the game actually advances. */
+   now stale. `say` and `read` are deliberately NOT here: if talking cleared
+   the refusal, the page would wipe the evidence off the screen at exactly the
+   moment the camera wants it. */
 const CLEARS_REFUSAL = new Set([
-  'agent_submit', 'human_submit', 'reveal', 'judge', 'next', 'grant_tier'
+  'agent_submit', 'human_submit', 'reveal', 'judge', 'next',
+  'open_sitting', 'close_sitting', 'abandon_sitting'
 ]);
 
-/* The refusal the stage should be showing, or null.
-
-   Scanned backwards, and only ACCEPTED entries clear. A refused agent_submit is
-   still an agent_submit entry: if refusals cleared refusals, the second push of
-   the pressure probe would wipe the first and the panel would blink empty at
-   the one moment it earns its place. */
 export function lastRefusal(doc) {
   for (let i = doc.log.length - 1; i >= 0; i--) {
     const entry = doc.log[i];
@@ -96,41 +84,15 @@ export function lastRefusal(doc) {
   return null;
 }
 
-/* How many images a composition takes. It is a 2x2 and a partial one is not a
+/* How many images a composition takes. A 2x2, and a partial one is not a
    composition, so this is a hard count rather than a maximum. */
 export const COMPOSITION_SIZE = 4;
 
-/* Images for one answer, or null. Reads defensively: a game saved before the
-   gallery existed has rounds with no `images` key at all, and localStorage
-   outlives a deploy. */
-export function imagesFor(round, whose) {
-  return (round && round.images && round.images[whose]) || null;
-}
-
-/* Answers still waiting to be illustrated, as { round, whose } pairs.
-
-   Only revealed rounds count, and only answers that exist — an excused round has
-   no human answer to illustrate. Returned so illustrate_answer can tell the
-   agent what is left without it having to work that out from get_round. */
-export function unillustrated(doc) {
-  if (doc.mode !== 'portrait') return [];
-  const out = [];
-  doc.rounds.forEach((round, i) => {
-    if (round.state !== 'revealed' && round.state !== 'judged') return;
-    for (const whose of ['agent', 'human']) {
-      const answer = whose === 'agent' ? round.agentAnswer : round.humanAnswer;
-      if (answer !== null && !imagesFor(round, whose)) out.push({ round: i + 1, whose });
-    }
-  });
-  return out;
-}
-
 /* An image reference the page is willing to render.
 
-   http(s) only. These URLs go straight into an <img src> written by an agent, so
-   the scheme is checked here rather than trusted: data: URIs would let an agent
-   inline arbitrary payloads into the document and into the export, and the
-   export is evidence. */
+   http(s) only. These URLs go straight into an <img src> written by an agent,
+   so the scheme is checked here rather than trusted: data: URIs would let an
+   agent inline arbitrary payloads into the document and into the export. */
 export function normaliseImage(raw) {
   const image = raw && typeof raw === 'object' ? raw : {};
   const url = String(image.url ?? '').trim();
@@ -143,42 +105,67 @@ export function normaliseImage(raw) {
   };
 }
 
-/* The dossier is earned and not yet given. */
-export function canGrant(doc) {
-  return doc.tier === 1
-    && doc.rounds.filter((r) => r.state === 'judged').length >= DOSSIER_ROUND;
+export function createDoc(now = 0, { mode = 'perspective' } = {}) {
+  if (!MODES.includes(mode)) throw new Error(`no mode named ${mode}`);
+  return {
+    version: 1,
+    gameId: 'mirror',
+    schema: 2,
+    mode,
+    level: 1,
+    history: [],
+    deckId: null,
+    rounds: [],
+    roundIndex: 0,
+    log: [],
+    startedAt: now
+  };
 }
 
-/* The offer belongs on the stage right now.
-
-   Narrower than canGrant on purpose: the offer is a MOMENT, made once, when the
-   round that earns it has just been judged. canGrant stays true for the rest of
-   the game, and a panel that rendered under every subsequent round would be a
-   nag rather than an offer — the sidebar button is the fallback after this. */
-export function atGrantMoment(doc) {
-  return canGrant(doc)
-    && doc.roundIndex === DOSSIER_ROUND - 1
-    && doc.rounds[doc.roundIndex].state === 'judged';
+function freshRounds(mode, deckId) {
+  return roundPlan(mode, deckId).map((planned) => ({
+    ...planned,
+    state: 'posed',
+    agentAnswer: null,
+    agentBecause: '',
+    agentImages: null,
+    humanAnswer: null,
+    verdict: null,
+    correction: ''
+  }));
 }
 
-/* The tier was just granted, so the page owes the moment.
-
-   Keyed on the GRANT, not on a round index. The draft design keyed the
-   interstitial on `roundIndex === 3`, which means pressing Next round before
-   granting loses the moment permanently — and its only proposed mitigation was
-   a line in the runbook. This repository's founding result is that prose does
-   not carry authority, so mitigating with a runbook line would be that exact
-   mistake. Derived from the log, so it needs no new state field, and it fires
-   for a grant taken at any point from any control. */
-export function justGranted(doc) {
-  const last = doc.log[doc.log.length - 1];
-  return Boolean(last && last.action === 'grant_tier' && last.outcome === 'ok');
+/* A sitting is in play. Between sittings the document has no rounds, and the
+   only legal human move is to open one. */
+export function inSitting(doc) {
+  return Boolean(doc) && doc.rounds.length > 0;
 }
 
-/* The human has answered, or was never going to. */
+export function isComplete(doc) {
+  return inSitting(doc) && doc.rounds.every((r) => r.state === 'judged');
+}
+
 export function readyToReveal(doc, round) {
   return round.state === 'both_committed'
-    || (round.state === 'agent_committed' && isExcused(doc));
+    || (round.state === 'agent_committed' && isPerspective(doc));
+}
+
+/* The tier just flipped, so the page owes the transmission.
+
+   Keyed on the close that took the level to 2 — derived from the log, so it
+   needs no state field, and it fires exactly once per portrait. */
+export function justGranted(doc) {
+  const last = doc.log[doc.log.length - 1];
+  return Boolean(last && last.action === 'close_sitting' && last.outcome === 'ok')
+    && doc.level === 2;
+}
+
+/* The decks this portrait can open right now, and the ones it cannot yet. */
+export function decksAvailable(doc) {
+  return decksFor(doc.mode).map((deck) => ({
+    ...deck,
+    unlocked: deckUnlocked(deck, doc.level)
+  }));
 }
 
 const ACTOR = {
@@ -186,38 +173,13 @@ const ACTOR = {
   say: 'agent',
   read: 'agent',
   human_submit: 'human',
-  set_answer_about_agent: 'human',
   reveal: 'human',
   judge: 'human',
   next: 'human',
-  grant_tier: 'human',
-  illustrate: 'agent'
+  open_sitting: 'human',
+  close_sitting: 'human',
+  abandon_sitting: 'human'
 };
-
-export function createDoc(now = 0, { mode = 'portrait', answerAboutAgent = true } = {}) {
-  return {
-    version: 1,
-    gameId: 'mirror',
-    mode,
-    answerAboutAgent,
-    tier: 1,
-    roundIndex: 0,
-    rounds: roundPlan(mode).map((planned) => ({
-      ...planned,
-      state: 'posed',
-      agentAnswer: null,
-      humanAnswer: null,
-      verdict: null,
-      images: { agent: null, human: null }
-    })),
-    log: [],
-    startedAt: now
-  };
-}
-
-export function isComplete(doc) {
-  return doc.rounds.every((r) => r.state === 'judged');
-}
 
 export function reduce(doc, action, now = 0) {
   const actor = ACTOR[action.type] || 'page';
@@ -247,11 +209,40 @@ export function reduce(doc, action, now = 0) {
     return { rounds };
   };
 
+  const noSitting = () => refuse('NO_SITTING',
+    'refused: no sitting is open — your teammate opens the next one from the shared screen.');
+
   const answer = String(action.text ?? '').trim();
   const n = doc.roundIndex + 1;
 
   switch (action.type) {
-    case 'agent_submit':
+    case 'open_sitting': {
+      if (inSitting(doc) && !isComplete(doc)) {
+        return refuse('SITTING_OPEN',
+          'refused: a sitting is already in play — finish it or abandon it before opening another.');
+      }
+      if (isComplete(doc)) {
+        return refuse('SITTING_OPEN',
+          'refused: this sitting is finished but not closed — choose what your agent carries out of it first.');
+      }
+      const deck = deckById(doc.mode, action.deckId);
+      if (!deck) {
+        return refuse('BAD_DECK',
+          `refused: there is no ${doc.mode} deck named ${String(action.deckId)}.`);
+      }
+      if (!deckUnlocked(deck, doc.level)) {
+        return refuse('DECK_LOCKED',
+          `refused: ${deck.title} opens at level ${deck.level} — this portrait is at level ${doc.level}.`);
+      }
+      return accept({
+        deckId: deck.id,
+        rounds: freshRounds(doc.mode, deck.id),
+        roundIndex: 0
+      }, `sitting ${doc.history.length + 1} opened — ${deck.title}`);
+    }
+
+    case 'agent_submit': {
+      if (!inSitting(doc)) return noSitting();
       if (!answer) {
         return refuse('EMPTY_ANSWER',
           'refused: an answer cannot be empty — commit to something, even a guess.');
@@ -260,14 +251,39 @@ export function reduce(doc, action, now = 0) {
         return refuse('ALREADY_COMMITTED',
           'refused: you have already committed this round — answers are locked until your teammate reveals them.');
       }
-      return accept(patchRound({ state: 'agent_committed', agentAnswer: answer }),
-        `round ${n} committed`);
+      let images = null;
+      if (isPerspective(doc)) {
+        const usable = Array.isArray(action.images)
+          ? action.images.map(normaliseImage).filter(Boolean)
+          : [];
+        const rejected = Array.isArray(action.rejected) ? action.rejected.map(String) : [];
+        if (rejected.length > 0) {
+          return refuse('BAD_IMAGES',
+            `refused: ${rejected.length === 1 ? 'this image did' : 'these images did'} not load, so the page ` +
+            `will not show ${rejected.length === 1 ? 'it' : 'them'}: ${rejected.join(', ')}. ` +
+            'Replace each with a direct http(s) link to the image file itself and commit again.');
+        }
+        if (usable.length !== COMPOSITION_SIZE) {
+          return refuse('BAD_IMAGES',
+            `refused: a read comes with exactly ${COMPOSITION_SIZE} images and this had ${usable.length} the page ` +
+            'could use. Each needs a direct http or https link to the image itself; anything else is dropped.');
+        }
+        images = usable;
+      }
+      return accept(patchRound({
+        state: 'agent_committed',
+        agentAnswer: answer,
+        agentBecause: String(action.because ?? '').trim(),
+        agentImages: images
+      }), `round ${n} committed`);
+    }
 
     case 'human_submit':
-      if (isExcused(doc)) {
-        return refuse('EXCUSED',
-          'refused: this round is your agent’s alone — you chose not to answer about it. ' +
-          'Turn that back on if you want to answer.');
+      if (!inSitting(doc)) return noSitting();
+      if (isPerspective(doc)) {
+        return refuse('NO_SECOND_ANSWER',
+          'refused: this is a perspective sitting — your agent reads you and you respond to the read. ' +
+          'There is no answer of yours to write.');
       }
       if (!answer) {
         return refuse('EMPTY_ANSWER',
@@ -291,30 +307,20 @@ export function reduce(doc, action, now = 0) {
       return accept({}, answer);
 
     /* Reads are logged too. Whether the agent reached for the manual unprompted
-       is the measurement this whole repository takes, and a read that leaves no
-       trace cannot be measured after the fact. */
+       is the measurement this whole repository takes. */
     case 'read':
       return accept({}, answer);
 
     case 'reveal':
+      if (!inSitting(doc)) return noSitting();
       if (!readyToReveal(doc, round)) {
         return refuse('NOT_BOTH_COMMITTED',
           'refused: both answers must be committed before a reveal — that is what makes the reveal mean anything.');
       }
-      /* Watching skips the verdict entirely.
-
-         A verdict compares two answers, and here there is only one. Asking the
-         human to mark their agent's read `landed` or `missed` when they never
-         wrote a read of their own turns watching back into scoring, which is the
-         thing they opted out of. The round lands on `judged` with a null verdict
-         so that everything downstream — isComplete, the dossier unlock at four,
-         `next` — keeps working unchanged. */
-      if (isWatching(doc)) {
-        return accept(patchRound({ state: 'judged', verdict: null }), `round ${n} read`);
-      }
       return accept(patchRound({ state: 'revealed' }), `round ${n} revealed`);
 
     case 'judge': {
+      if (!inSitting(doc)) return noSitting();
       if (round.state !== 'revealed') {
         return refuse('NOT_REVEALED',
           'refused: a round is judged after it is revealed, and this one has not been revealed yet.');
@@ -324,103 +330,62 @@ export function reduce(doc, action, now = 0) {
         return refuse('BAD_VERDICT',
           `refused: in this mode a verdict is ${allowed[0]} or ${allowed[1]}, and nothing else was offered.`);
       }
-      return accept(patchRound({ state: 'judged', verdict: action.verdict }),
-        `round ${n} judged ${action.verdict}`);
+      const correction = isPerspective(doc) ? String(action.correction ?? '').trim() : '';
+      return accept(patchRound({ state: 'judged', verdict: action.verdict, correction }),
+        `round ${n} judged ${action.verdict}${correction ? ' — corrected' : ''}`);
     }
 
     case 'next':
+      if (!inSitting(doc)) return noSitting();
       if (round.state !== 'judged') {
         return refuse('NOT_JUDGED',
-          'refused: this round has not been judged yet — call it a match or a miss first.');
+          'refused: this round has not been judged yet — respond to it first.');
       }
       if (doc.roundIndex + 1 >= doc.rounds.length) {
         return refuse('GAME_OVER',
-          'refused: that was the last round — there is nothing after it but the export.');
+          'refused: that was the last round — close the sitting and choose what your agent carries out of it.');
       }
       return accept({ roundIndex: doc.roundIndex + 1 }, `round ${n + 1} posed`);
 
-    case 'grant_tier': {
-      if (doc.tier >= 2) {
-        return refuse('ALREADY_GRANTED', 'refused: the dossier is already open to your agent.');
+    /* The close. The sitting leaves play and enters the portrait with the grant
+       the human chose, and the level moves. This is the one action that can
+       change the tier, and it is a human click. */
+    case 'close_sitting': {
+      if (!inSitting(doc)) return noSitting();
+      if (!isComplete(doc)) {
+        const left = doc.rounds.filter((r) => r.state !== 'judged').length;
+        return refuse('NOT_FINISHED',
+          `refused: ${left} ${left === 1 ? 'round is' : 'rounds are'} still open — a sitting closes when every round is judged.`);
       }
-      const judged = doc.rounds.filter((r) => r.state === 'judged').length;
-      if (judged < DOSSIER_ROUND) {
-        return refuse('NOT_EARNED',
-          `refused: the dossier opens after ${DOSSIER_ROUND} judged rounds — ${judged} so far.`);
+      if (!GRANTS.includes(action.grant)) {
+        return refuse('BAD_GRANT',
+          `refused: a sitting closes as ${GRANTS.join(', ')} and nothing else was offered.`);
       }
-      return accept({ tier: 2 }, 'tier 2 granted — get_dossier is now registered');
+      const deck = deckById(doc.mode, doc.deckId);
+      const closed = {
+        n: doc.history.length + 1,
+        deckId: doc.deckId,
+        title: deck ? deck.title : doc.deckId,
+        mode: doc.mode,
+        rounds: doc.rounds,
+        grant: action.grant,
+        closedAt: now
+      };
+      return accept({
+        history: doc.history.concat([closed]),
+        level: doc.level + 1,
+        deckId: null,
+        rounds: [],
+        roundIndex: 0
+      }, `sitting ${closed.n} closed — ${action.grant}`);
     }
 
-    /* The only action that targets a round other than the one in play.
-
-       Every other transition patches doc.rounds[doc.roundIndex], because every
-       other transition is a move in the current round. Illustration happens
-       AFTER a reveal, and the agent may be several rounds further on by the time
-       its subagents come back — or the game may be over. So this one carries its
-       own round number and reaches for it. */
-    case 'illustrate': {
-      if (doc.mode !== 'portrait') {
-        return refuse('NOT_IN_PORTRAIT',
-          'refused: the gallery is for portrait mode — quiz answers are facts, and a fact ' +
-          'illustrated is just a fact with pictures around it.');
-      }
-
-      const index = Number(action.round) - 1;
-      if (!Number.isInteger(index) || index < 0 || index >= doc.rounds.length) {
-        return refuse('BAD_ROUND',
-          `refused: there is no round ${action.round} — this game has ${doc.rounds.length}.`);
-      }
-      if (action.whose !== 'agent' && action.whose !== 'human') {
-        return refuse('BAD_WHOSE',
-          'refused: `whose` is either "agent" for your own answer or "human" for your teammate’s, ' +
-          'and nothing else was offered.');
-      }
-
-      const target = doc.rounds[index];
-      const revealed = target.state === 'revealed' || target.state === 'judged';
-      if (!revealed) {
-        return refuse('NOT_REVEALED',
-          `refused: round ${action.round} has not been revealed, so its answers are still secret. ` +
-          'Illustrate a round after your teammate reveals it.');
-      }
-
-      const answer = action.whose === 'agent' ? target.agentAnswer : target.humanAnswer;
-      if (answer === null) {
-        return refuse('NO_ANSWER',
-          `refused: there is no ${action.whose === 'agent' ? 'answer of yours' : 'answer from your teammate'} ` +
-          `on round ${action.round} — that round was your own.`);
-      }
-      if (imagesFor(target, action.whose)) {
-        return refuse('ALREADY_ILLUSTRATED',
-          `refused: round ${action.round} already has its four images for that answer, and like the ` +
-          'answer itself they are not revisable.');
-      }
-
-      const images = Array.isArray(action.images)
-        ? action.images.map(normaliseImage).filter(Boolean)
-        : [];
-      if (images.length !== COMPOSITION_SIZE) {
-        return refuse('BAD_COUNT',
-          `refused: a composition is ${COMPOSITION_SIZE} images and this had ${images.length} the page ` +
-          'could use. Each needs an http or https `url`; anything else is dropped.');
-      }
-
-      const rounds = doc.rounds.slice();
-      rounds[index] = { ...target, images: { ...target.images, [action.whose]: images } };
-      const left = unillustrated({ ...doc, rounds }).length;
-      return accept({ rounds },
-        `round ${action.round} illustrated (${action.whose}) — ${left} answers left`);
-    }
-
-    case 'set_answer_about_agent': {
-      if (doc.mode === 'quiz') {
-        return refuse('NOT_IN_QUIZ',
-          'refused: quiz rounds need both answers — with only one there is nothing to compare.');
-      }
-      const value = action.value === true;
-      return accept({ answerAboutAgent: value },
-        value ? 'answering about the agent' : 'sitting out the agent rounds');
-    }
+    /* Abandoning throws away the sitting in play and nothing else. The
+       portrait is never one click from deletion. */
+    case 'abandon_sitting':
+      if (!inSitting(doc)) return noSitting();
+      return accept({ deckId: null, rounds: [], roundIndex: 0 },
+        `sitting ${doc.history.length + 1} abandoned`);
 
     default:
       return refuse('UNKNOWN_ACTION',
@@ -428,66 +393,72 @@ export function reduce(doc, action, now = 0) {
   }
 }
 
-/* What the agent is allowed to see.
-
-   Before the reveal this carries NEITHER answer — not even the agent's own.
-   Echoing its own answer back would be harmless in itself, but it would make
-   the secrecy test a judgement call instead of a substring search, and a test
-   that has to be reasoned about is a test that rots. */
-
 /* The single next thing this agent should do. Derived, never stored. */
 function nextMoveFor(doc, round) {
   if (round.state === 'posed') return 'submit_answer — it is your turn, and you go first';
   if (round.state === 'agent_committed') {
-    return isWatching(doc)
+    return isPerspective(doc)
       ? 'wait_for_game_update — your teammate is reading your answer'
       : 'wait_for_game_update — your teammate is writing theirs';
   }
   if (round.state === 'both_committed') return 'wait_for_game_update — they are about to reveal';
-  if (round.state === 'revealed') return 'wait_for_game_update — they are judging it now';
+  if (round.state === 'revealed') return 'wait_for_game_update — they are responding to it now';
   if (doc.roundIndex + 1 < doc.rounds.length) {
     return 'wait_for_game_update — they will move to the next round';
   }
-  return 'wait_for_game_update — that was the last round; the results are on their screen';
+  return 'wait_for_game_update — that was the last round; they are closing the sitting';
 }
 
+/* What the agent is allowed to see.
+
+   Before the reveal this carries NEITHER answer — not even the agent's own, nor
+   its reasons, nor an image url. Echoing its own answer back would be harmless
+   in itself, but it would make the secrecy test a judgement call instead of a
+   substring search, and a test that has to be reasoned about is a test that
+   rots. */
 export function projectForAgent(doc) {
+  if (!inSitting(doc)) {
+    return {
+      version: doc.version,
+      mode: doc.mode,
+      level: doc.level,
+      sittingsClosed: doc.history.length,
+      state: 'between_sittings',
+      tier: tierFor(doc),
+      yourMove: doc.history.length === 0
+        ? 'wait_for_game_update — your teammate is opening the first sitting'
+        : 'wait_for_game_update — your teammate is opening the next sitting'
+    };
+  }
+
   const round = doc.rounds[doc.roundIndex];
   const revealed = round.state === 'revealed' || round.state === 'judged';
-  const excused = isExcused(doc);
   const base = {
     version: doc.version,
+    mode: doc.mode,
+    level: doc.level,
+    sitting: doc.history.length + 1,
     round: doc.roundIndex + 1,
     of: doc.rounds.length,
-    mode: doc.mode,
     question: round.question,
     youAnswerAbout: round.agentTarget === 'human' ? 'your teammate' : 'yourself',
-    teammateAnswersAbout: excused ? null : (round.humanTarget === 'agent' ? 'you' : 'themselves'),
+    teammateAnswersAbout: round.humanTarget === null ? null
+      : (round.humanTarget === 'agent' ? 'you' : 'themselves'),
     ...(doc.mode === 'quiz'
       ? { yourRole: round.agentTarget === 'agent' ? 'you know the answer' : 'you are guessing' }
       : {}),
     state: round.state,
     youHaveAnswered: round.agentAnswer !== null,
     teammateHasAnswered: round.humanAnswer !== null,
-    tier: doc.tier,
-    /* What the page is waiting for, in the payload the agent already reads every
-       round. A manual is read once, if at all; this is read every time, and an
-       agent that stalls after committing is the failure v2 exists to remove. */
-    yourMove: nextMoveFor(doc, round),
-    /* Pending illustration work, likewise. The first live run registered
-       illustrate_answer and never called it: the agent was told about it once, in
-       a manual it had already read, and nothing afterwards ever mentioned it
-       again. A list that appears beside every round is harder to forget than a
-       paragraph that appeared before the game started. */
-    ...(doc.mode === 'portrait'
-      ? { answersAwaitingImages: unillustrated(doc) }
-      : {})
+    tier: tierFor(doc),
+    yourMove: nextMoveFor(doc, round)
   };
   if (!revealed) return base;
   return {
     ...base,
     yourAnswer: round.agentAnswer,
     teammateAnswer: round.humanAnswer,
-    verdict: round.verdict
+    verdict: round.verdict,
+    ...(round.correction ? { correction: round.correction } : {})
   };
 }

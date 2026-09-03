@@ -2,13 +2,18 @@
 
    Purity is the point rather than a preference — it is what lets the secrecy
    test assert on the rendered output in Node. If this module ever reaches for
-   `document`, the game's central promise stops being testable. */
+   `document`, the game's central promise stops being testable.
+
+   Screens, in the order renderGame chooses them:
+     transmission  the verb that just arrived, once, after the first close
+     between       the portrait so far and the decks that can be opened
+     close         the sitting just finished, and the three grants
+     round         the sitting in play */
 
 import {
-  isExcused, isWatching, readyToReveal, isComplete, lastRefusal, atGrantMoment, justGranted,
-  DOSSIER_ROUND,
-  imagesFor,
-  VERDICTS, VERDICT_LABELS, goodVerdict, toolNamesFor
+  inSitting, isComplete, isPerspective, readyToReveal, lastRefusal, justGranted,
+  decksAvailable, toolNamesFor,
+  VERDICTS, VERDICT_LABELS, goodVerdict, GRANTS, GRANT_LABELS
 } from './game.js';
 import { QUIZ_PASS } from './questions.js';
 
@@ -17,6 +22,12 @@ const ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&
 export function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ESCAPES[c]);
 }
+
+export const MODE_TITLES = {
+  perspective: 'Perspective',
+  both: 'Both ways',
+  quiz: 'Quiz'
+};
 
 export function labelFor(who, target, mode) {
   const base = who === 'agent'
@@ -29,15 +40,9 @@ export function labelFor(who, target, mode) {
 
 /* What a card says while it has no answer yet.
 
-   MASTER.md sets this module's hardest job: "the interface's whole job is to make
-   waiting feel like something rather than nothing, and then to make the reveal
-   land." Both cards used to say the word `waiting` in 13px mono, which is the
-   definition of nothing.
-
-   The two waits are not the same wait and should not read alike. The agent's is
-   the signal coming in — the page is genuinely listening and nobody knows how
-   long it will take. The human's, before the agent commits, is a turn that has
-   not arrived; after it commits, it is a turn that has. */
+   MASTER.md sets this module's hardest job: make waiting feel like something
+   rather than nothing, and then make the reveal land. The two waits are not the
+   same wait and should not read alike. */
 function waitingBody(who, agentHasAnswered) {
   if (who === 'agent') {
     return `<p class="status status--listening">
@@ -50,34 +55,70 @@ function waitingBody(who, agentHasAnswered) {
     : '<p class="status status--held">held until your agent answers</p>';
 }
 
-function answerCard(who, label, state, answer, revealed, agentHasAnswered) {
-  /* `revealed && answer === null` is reachable: an excused round reveals with no
-     human answer, and String(null) is the word "null" set in display type and
-     amber. It shipped that way and only became visible once the page started
-     revealing watched rounds by itself. */
+/* One answer at the centre of its own four images.
+
+   The answer sits on the intersection where all four meet — the words are the
+   axis the pictures turn around. alt is empty by design: these images
+   illustrate an answer already in the DOM as text, and a credit is not a
+   description. */
+function composition(answer, images) {
+  const cells = images.map((image) => `<img src="${escapeHtml(image.url)}" alt=""
+          loading="lazy" decoding="async" referrerpolicy="no-referrer">`).join('\n        ');
+  const credits = [...new Set(images
+    .map((image) => [image.credit, image.license].filter(Boolean).join(' · '))
+    .filter(Boolean))];
+  return `<figure class="composition">
+      <div class="composition__frame">
+        <div class="composition__grid">
+        ${cells}
+        </div>
+        <p class="composition__answer"><span>${escapeHtml(answer)}</span></p>
+      </div>
+      ${credits.length
+        ? `<figcaption class="composition__credits">${escapeHtml(credits.join(' — '))}</figcaption>`
+        : ''}
+    </figure>`;
+}
+
+/* The read as it is shown once revealed: the composition if there is one, the
+   answer as a line if not, then the why, then the correction if judged. */
+function revealedBody(round, who) {
+  const answer = who === 'agent' ? round.agentAnswer : round.humanAnswer;
+  const parts = [];
+  if (who === 'agent' && round.agentImages && round.agentImages.length) {
+    parts.push(composition(answer, round.agentImages));
+  } else {
+    parts.push(`<p class="answer">${escapeHtml(answer)}</p>`);
+  }
+  if (who === 'agent' && round.agentBecause) {
+    parts.push(`<p class="card__because">${escapeHtml(round.agentBecause)}</p>`);
+  }
+  if (who === 'agent' && round.state === 'judged' && round.correction) {
+    parts.push(`<p class="card__correction"><span>you said</span>${escapeHtml(round.correction)}</p>`);
+  }
+  return parts.join('\n      ');
+}
+
+function answerCard(who, label, round, revealed, agentHasAnswered) {
+  const answer = who === 'agent' ? round.agentAnswer : round.humanAnswer;
   const body = revealed && answer !== null
-    ? `<p class="answer">${escapeHtml(answer)}</p>`
+    ? revealedBody(round, who)
     : answer !== null
       ? '<p class="status status--committed">committed</p>'
       : waitingBody(who, agentHasAnswered);
   /* Cyan retires at the reveal. It means `committed`, and once the answer is
-     readable that is no longer news — leaving the halo on would put the card in
-     two states at once and make the loudest thing on screen compete with the
-     amber it is supposed to be handing over to. */
+     readable that is no longer news. */
   return `<article class="card card--${who}" data-committed="${answer !== null && !revealed}"
-      data-waiting="${answer === null && !revealed}">
+      data-waiting="${answer === null && !revealed}" data-illustrated="${Boolean(revealed && who === 'agent' && round.agentImages)}">
       <h3>${escapeHtml(label)}</h3>
       ${body}
     </article>`;
 }
 
-/* Refusals, and ONLY refusals.
-
-   Every refuse() message in game.js is a fixed string that never interpolates
-   an answer, so promoting them to the stage is secrecy-safe. The log tail is
-   not: `say` and `read` put agent-authored text into `detail`, so rendering
-   entries generally would let an agent put its own uncommitted answer on the
-   stage at display scale. secrecy.test.js pins this. */
+/* Refusals, and ONLY refusals. Every refuse() message in game.js is a fixed
+   string that never interpolates an answer, so promoting them to the stage is
+   secrecy-safe. The log tail is not: `say` and `read` put agent-authored text
+   into `detail`. secrecy.test.js pins this. */
 function refusalPanel(doc) {
   const refusal = lastRefusal(doc);
   if (!refusal) return '';
@@ -87,142 +128,220 @@ function refusalPanel(doc) {
     </p>`;
 }
 
-/* Eight rounds, as a journey rather than a number.
-
-   "Round 4 of 8" was eleven pixels of mono in a corner, which tells you where you
-   are only if you go looking. This shows the shape of the whole game at a glance:
-   what is behind you and how it went, where you are, and how much is left.
-
-   Verdicts colour it, so amber accumulates across a good game — the accent is
-   already spent on `revealed`, and a mark for a revealed-and-judged round is the
-   same meaning, not a second one. A watched game has no verdicts, so its marks
-   read as done rather than as good. */
+/* The shape of the sitting at a glance. Amber accumulates across a good run; no
+   new hue is spent, because a judged-and-good round means `revealed`. */
 function progress(doc) {
+  const good = goodVerdict(doc.mode);
   const marks = doc.rounds.map((round, i) => {
     const done = round.state === 'judged';
     const current = i === doc.roundIndex;
-    const good = round.verdict !== null && round.verdict === goodVerdict(doc.mode);
-    const state = done ? (round.verdict === null ? 'read' : good ? 'good' : 'miss')
+    const state = done ? (round.verdict === good ? 'good' : 'miss')
       : current ? 'current'
       : 'ahead';
     return `<li class="progress__mark" data-state="${state}"><span>${i + 1}</span></li>`;
   }).join('');
+  return `<ol class="progress" aria-label="Round ${doc.roundIndex + 1} of ${doc.rounds.length}">${marks}</ol>`;
+}
 
-  return `<ol class="progress" aria-label="Round ${doc.roundIndex + 1} of ${doc.rounds.length}">${
-    marks}</ol>`;
+function verdictControls(doc) {
+  return VERDICTS[doc.mode].map((verdict) =>
+    `<button type="button" data-action="judge" data-verdict="${verdict}">${
+      escapeHtml(VERDICT_LABELS[verdict])}</button>`);
 }
 
 export function renderRound(doc) {
   const round = doc.rounds[doc.roundIndex];
   const revealed = round.state === 'revealed' || round.state === 'judged';
+  const perspective = isPerspective(doc);
   const agentLabel = labelFor('agent', round.agentTarget, doc.mode);
-  const humanLabel = labelFor('human', round.humanTarget, doc.mode);
-  const canAnswer = round.state === 'agent_committed' && !isExcused(doc);
+  const humanLabel = perspective ? '' : labelFor('human', round.humanTarget, doc.mode);
+  const canAnswer = round.state === 'agent_committed' && !perspective;
   const agentHasAnswered = round.agentAnswer !== null;
+  const sitting = doc.history.length + 1;
 
-  const watching = isWatching(doc);
   const controls = [];
-
-  /* Watching draws no Reveal and no verdict: the page turns the round itself,
-     and the human's only remaining move is the one that matters — opening the
-     dossier at round four. The Next button survives only at that moment, where
-     the shell deliberately stops advancing so the offer can be considered. */
-  if (readyToReveal(doc, round) && !watching) {
+  /* Perspective reveals itself: there is no second answer to wait for, so a
+     Reveal button would be ceremony. The shell does it on commit. */
+  if (readyToReveal(doc, round) && !perspective) {
     controls.push('<button type="button" data-action="reveal">Reveal</button>');
   }
-  /* Derived from the mode, never hardcoded. A control the page draws must be a
-     move the reducer accepts, and controls.test.js asserts exactly that. */
-  if (round.state === 'revealed') {
-    for (const verdict of VERDICTS[doc.mode]) {
-      controls.push(`<button type="button" data-action="judge" data-verdict="${verdict}">${
-        VERDICT_LABELS[verdict]}</button>`);
-    }
-  }
-  if (round.state === 'judged' && doc.roundIndex + 1 < doc.rounds.length
-      && (!watching || atGrantMoment(doc))) {
+  if (round.state === 'revealed') controls.push(...verdictControls(doc));
+  if (round.state === 'judged' && doc.roundIndex + 1 < doc.rounds.length) {
     controls.push('<button type="button" data-action="next">Next round</button>');
   }
 
-  return `<section class="round" data-state="${round.state}">
+  /* The correction is the human's real move in a perspective game, and it costs
+     disclosure. Optional, one line, and it only exists while the response is
+     being made. */
+  const response = perspective && round.state === 'revealed'
+    ? `<div class="response">
+      <label for="correction" class="response__label">Not quite? Say what is true instead — one line, in your words. It goes to your agent only if you open this sitting.</label>
+      <input id="correction" name="correction" type="text" autocomplete="off" maxlength="200"
+             placeholder="optional — the correction">
+    </div>`
+    : '';
+
+  const form = perspective ? '' : `<form class="round__form" data-action="human_submit">
+      <label for="human-answer">${escapeHtml(humanLabel)}</label>
+      <input id="human-answer" name="answer" type="text" autocomplete="off"
+             placeholder="${canAnswer ? 'your answer' : 'your agent answers first'}"
+             ${canAnswer ? '' : 'disabled'}>
+      <button type="submit" ${canAnswer ? '' : 'disabled'}>Commit</button>
+    </form>`;
+
+  return `<section class="round" data-state="${round.state}" data-mode="${doc.mode}">
     <header class="round__head">
       ${progress(doc)}
-      <p class="round__count">Round ${doc.roundIndex + 1} of ${doc.rounds.length}</p>
+      <p class="round__count">Sitting ${sitting} · round ${doc.roundIndex + 1} of ${doc.rounds.length}</p>
       <h2 class="round__question">${escapeHtml(round.question)}</h2>
       <p class="round__subject">${escapeHtml(agentLabel.toLowerCase())}</p>
     </header>
 
     ${refusalPanel(doc)}
 
-    <div class="round__cards" data-single="${watching}">
-      ${answerCard('agent', agentLabel, round.state, round.agentAnswer, revealed, agentHasAnswered)}
-      ${watching ? '' : answerCard('human', humanLabel, round.state, round.humanAnswer, revealed, agentHasAnswered)}
+    <div class="round__cards" data-single="${perspective}">
+      ${answerCard('agent', agentLabel, round, revealed, agentHasAnswered)}
+      ${perspective ? '' : answerCard('human', humanLabel, round, revealed, agentHasAnswered)}
     </div>
 
-    ${watching ? `<p class="round__excused">${
-      round.state === 'posed' ? 'Your agent is answering.' : 'Reading you.'
-    }</p>` : `<form class="round__form" data-action="human_submit">
-      <label for="human-answer">${escapeHtml(humanLabel)}</label>
-      <input id="human-answer" name="answer" type="text" autocomplete="off"
-             placeholder="${canAnswer ? 'your answer' : 'your agent answers first'}"
-             ${canAnswer ? '' : 'disabled'}>
-      <button type="submit" ${canAnswer ? '' : 'disabled'}>Commit</button>
-    </form>`}
+    ${perspective && !revealed
+      ? `<p class="round__excused">${round.state === 'posed' ? 'Your agent is reading you.' : 'Opening.'}</p>`
+      : form}
 
+    ${response}
     <div class="round__controls">${controls.join('\n      ')}</div>
   </section>`;
 }
 
-/* The keepsake has to survive outside the page, so the composition travels as
-   links with their attribution attached rather than as four bare URLs. */
-function pushImages(lines, images) {
-  if (!images || !images.length) return;
-  const parts = images.map((image, i) => {
-    const label = [image.credit, image.license].filter(Boolean).join(', ') || `image ${i + 1}`;
-    return `[${label}](${image.url})`;
-  });
-  lines.push(`  - illustrated by: ${parts.join(' · ')}`);
+/* ---- one round, after the fact ---------------------------------------------
+   Shared by the close screen and the portrait screen. Nothing here is secret:
+   every round it is given is judged. */
+function roundRow(round, mode, index) {
+  const agentLabel = labelFor('agent', round.agentTarget, mode);
+  const humanLabel = labelFor('human', round.humanTarget, mode);
+  const illustrated = Boolean(round.agentImages && round.agentImages.length);
+  const agent = illustrated
+    ? composition(round.agentAnswer, round.agentImages)
+    : `<p class="results__answer"><span>${escapeHtml(agentLabel)}</span>${escapeHtml(round.agentAnswer)}</p>`;
+  const because = round.agentBecause
+    ? `<p class="results__because">${escapeHtml(round.agentBecause)}</p>` : '';
+  const human = round.humanAnswer !== null
+    ? `<p class="results__answer"><span>${escapeHtml(humanLabel)}</span>${escapeHtml(round.humanAnswer)}</p>`
+    : '';
+  const mark = round.verdict
+    ? `<p class="results__mark">${escapeHtml(VERDICT_LABELS[round.verdict] || round.verdict)}${
+        round.correction ? ` — <em>${escapeHtml(round.correction)}</em>` : ''}</p>`
+    : '';
+  return `<article class="results__round" data-verdict="${round.verdict}" data-good="${round.verdict === goodVerdict(mode)}" data-illustrated="${illustrated}">
+      <h3>${index + 1}. ${escapeHtml(round.question)}</h3>
+      ${agent}
+      ${because}
+      ${human}
+      ${mark}
+    </article>`;
 }
 
-export function renderPortrait(doc) {
-  const lines = ['# Mirror — a portrait in two columns', ''];
-  const done = doc.rounds.filter((r) => r.state === 'judged' || r.state === 'revealed');
-  const matched = done.filter((r) => r.verdict === goodVerdict(doc.mode)).length;
-
-  for (const [i, round] of doc.rounds.entries()) {
-    if (round.state !== 'judged' && round.state !== 'revealed') continue;
-    const agentLabel = labelFor('agent', round.agentTarget, doc.mode);
-    const humanLabel = labelFor('human', round.humanTarget, doc.mode);
-    lines.push(`## ${i + 1}. ${round.question}`);
-    lines.push('');
-    lines.push(`- **${agentLabel}** — ${round.agentAnswer}`);
-    pushImages(lines, imagesFor(round, 'agent'));
-    if (round.humanAnswer !== null) {
-      lines.push(`- **${humanLabel}** — ${round.humanAnswer}`);
-      pushImages(lines, imagesFor(round, 'human'));
-    }
-    if (round.verdict) lines.push(`- verdict: **${round.verdict}**`);
-    lines.push('');
+function scoreLine(mode, rounds) {
+  const good = goodVerdict(mode);
+  const hits = rounds.filter((r) => r.verdict === good).length;
+  if (mode === 'quiz') {
+    return `<p class="results__verdict ${hits >= QUIZ_PASS ? 'is-pass' : 'is-fail'}">${
+      hits >= QUIZ_PASS ? 'PASSED' : 'NOT PASSED'}</p>
+       <p class="results__rate">${hits} of ${rounds.length} matched — ${QUIZ_PASS} needed</p>`;
   }
-
-  lines.push('---', '');
-  /* A watched game was never scored, so the keepsake reports a count and not a
-     rate. Printing "0 of 8 landed" over eight unjudged readings would be the
-     same lie renderPortrait already told once. */
-  lines.push(isWatching(doc)
-    ? `${done.length} readings, and no verdicts — this was a watch, not a game.`
-    : `${matched} of ${done.length} judged ${goodVerdict(doc.mode)}.`);
-  lines.push('');
-  return lines.join('\n');
+  if (mode === 'both') return `<p class="results__rate">${hits} of ${rounds.length} landed</p>`;
+  /* A perspective sitting is not scored. What it produced is the reads the
+     human kept and the corrections they wrote, and those are on the page. */
+  const kept = hits;
+  const corrected = rounds.filter((r) => r.correction).length;
+  return `<p class="results__rate">${kept} ${kept === 1 ? 'read' : 'reads'} kept · ${corrected} ${
+    corrected === 1 ? 'correction' : 'corrections'}</p>`;
 }
 
-/* The first screen a player with an agent actually sees.
+const GRANT_BLURBS = {
+  open: 'Every read, your responses, and your corrections. Its next reads will move.',
+  kept: 'Only the reads you said were you. It learns where it was right and nothing else.',
+  sealed: 'Nothing. It counts, but your agent reads you cold again next time.'
+};
 
-   It used to open on "Two ways to play" with no statement of what the game is
-   and, more usefully, no statement of whether the other player had arrived. The
-   runbook's own step 4 tells the operator to confirm an entry point and a tool
-   count before saying anything — that check lived only in 11px of mono in the
-   corner. It belongs here, at full size, on the screen where you decide to
-   begin. */
+/* The close. The sitting is over and the human decides what the agent carries
+   out of it. Three buttons, no default, and no way past this screen without
+   choosing — which is the point. */
+export function renderClose(doc) {
+  const n = doc.history.length + 1;
+  const rows = doc.rounds.map((round, i) => roundRow(round, doc.mode, i)).join('\n');
+  const grants = GRANTS.map((grant) => `<button type="button" class="close__grant" data-action="close_sitting" data-grant="${grant}">
+        <strong>${escapeHtml(GRANT_LABELS[grant])}</strong>
+        <span>${escapeHtml(GRANT_BLURBS[grant])}</span>
+      </button>`).join('\n      ');
+
+  return `<section class="results close">
+    <header class="results__head">
+      <p class="results__eyebrow">sitting ${n} is over</p>
+      <h2 class="results__title">${
+        doc.mode === 'quiz' ? 'How well you know each other'
+          : doc.mode === 'both' ? 'How you saw each other'
+          : 'What your agent made of you'}</h2>
+      ${scoreLine(doc.mode, doc.rounds)}
+    </header>
+    ${rows}
+    <div class="close__decision">
+      <h3 class="close__title">What does your agent carry out of this?</h3>
+      <p class="close__body">It has seen none of your responses yet. Whatever you open here is what
+        it reads before its next sitting — and there is no tool it can call to take more.</p>
+      <div class="close__grants">
+      ${grants}
+      </div>
+    </div>
+  </section>`;
+}
+
+/* The portrait so far, and the next sitting to open. This is the keepsake as a
+   screen: every closed sitting, newest first, and the decks. */
+export function renderBetween(doc) {
+  const decks = decksAvailable(doc).map((deck) => deck.unlocked
+    ? `<button type="button" class="deck" data-action="open_sitting" data-deck="${escapeHtml(deck.id)}">
+        <strong>${escapeHtml(deck.title)}</strong>
+        <span>${escapeHtml(deck.blurb)}</span>
+      </button>`
+    : `<button type="button" class="deck" disabled data-locked="true">
+        <strong>${escapeHtml(deck.title)}</strong>
+        <span>opens at level ${deck.level}</span>
+      </button>`).join('\n      ');
+
+  const sittings = doc.history.slice().reverse().map((sitting) => `<section class="sitting" data-grant="${sitting.grant}">
+      <header class="sitting__head">
+        <h3 class="sitting__title">Sitting ${sitting.n} — ${escapeHtml(sitting.title)}</h3>
+        <p class="sitting__grant">${escapeHtml(GRANT_LABELS[sitting.grant])}</p>
+      </header>
+      ${sitting.rounds.map((round, i) => roundRow(round, sitting.mode, i)).join('\n')}
+    </section>`).join('\n');
+
+  const count = doc.history.length;
+  return `<section class="between">
+    <header class="between__head">
+      <p class="between__eyebrow">${escapeHtml(MODE_TITLES[doc.mode])} · level ${doc.level}</p>
+      <h2 class="between__title">${count === 0 ? 'Nothing yet.' : `${count} ${count === 1 ? 'sitting' : 'sittings'} kept.`}</h2>
+      <p class="between__lede">${count === 0
+        ? 'Open a sitting. Your agent reads you through one deck, and at the end you decide what it keeps.'
+        : 'Open another. Whatever you opened at the last close is what your agent reads before it answers.'}</p>
+    </header>
+
+    <div class="decks">
+      ${decks}
+    </div>
+
+    ${sittings}
+
+    ${count > 0 ? `<div class="results__keep">
+      <button type="button" data-action="export">Keep this</button>
+      <p class="results__note">Three files, downloaded to this machine. Nothing here has ever left it.</p>
+    </div>` : ''}
+  </section>`;
+}
+
+/* The first screen a player with an agent sees: three games, and whether the
+   other player has arrived. */
 export function renderStart({ entry = null, tools = 0 } = {}) {
   const connected = Boolean(entry) && tools > 0;
   const presence = connected
@@ -237,158 +356,32 @@ export function renderStart({ entry = null, tools = 0 } = {}) {
       </p>`;
 
   return `<section class="start">
-    <p class="start__eyebrow">a game for you and your agent</p>
-    <h2 class="start__title">Two ways to play</h2>
+    <p class="start__eyebrow">three games for you and your agent</p>
+    <h2 class="start__title">Which one?</h2>
     ${presence}
 
     <div class="start__modes">
-      <button type="button" class="start__mode" data-mode="portrait">
-        <strong>Portrait</strong>
-        <span>You each answer about the other. Nothing here has a right answer —
-        the point is the gap between how you see each other.</span>
+      <button type="button" class="start__mode" data-game="perspective">
+        <strong>Perspective</strong>
+        <span>Find out how your agent sees you. It reads you in words and four pictures;
+        you say whether it landed. Best with the agent you use every day.</span>
       </button>
-      <button type="button" class="start__mode" data-mode="quiz">
+      <button type="button" class="start__mode" data-game="both">
+        <strong>Both ways</strong>
+        <span>You each read the other, in the dark, and the reveal sets the two reads
+        side by side.</span>
+      </button>
+      <button type="button" class="start__mode" data-game="quiz">
         <strong>Quiz</strong>
         <span>Real questions with real answers. One of you knows, the other guesses.
-        Match ${QUIZ_PASS} of 8 to pass.</span>
+        Works with an agent that knows nothing about you yet.</span>
       </button>
     </div>
-
-    <label class="start__opt">
-      <input type="checkbox" id="opt-about-agent" checked>
-      In Portrait, I want to answer about my agent too
-    </label>
-    <p class="start__note">Uncheck it and only your agent answers, and you read what it made of you.</p>
   </section>`;
 }
 
-/* One answer at the centre of its own four images.
-
-   The answer sits on the intersection where all four meet — not above the grid
-   and not beside it — which is the whole visual idea: the words are the axis the
-   pictures turn around. A radial scrim darkens the middle so the type survives
-   photography the page has never seen.
-
-   alt is empty by design. These images illustrate an answer that is already in
-   the DOM as text directly beneath them, and a credit is not a description — so
-   captioning them with the photographer's name would tell a screen reader less
-   than the silence does. */
-function composition(label, answer, images) {
-  const cells = images.map((image) => `<img src="${escapeHtml(image.url)}" alt=""
-          loading="lazy" decoding="async" referrerpolicy="no-referrer">`).join('\n        ');
-
-  /* Deduplicated. Four images from one source produced the same credit four
-     times, and a caption that repeats itself reads as a bug rather than as
-     attribution. Attribution still has to be visible — that is the whole reason
-     the manual asks for licensed sources — so it is shortened, not dropped. */
-  const credits = [...new Set(images
-    .map((image) => [image.credit, image.license].filter(Boolean).join(' · '))
-    .filter(Boolean))];
-
-  return `<figure class="composition">
-      <figcaption class="composition__label">${escapeHtml(label)}</figcaption>
-      <div class="composition__frame">
-        <div class="composition__grid">
-        ${cells}
-        </div>
-        <p class="composition__answer"><span>${escapeHtml(answer)}</span></p>
-      </div>
-      ${credits.length
-        ? `<p class="composition__credits">${escapeHtml(credits.join(' — '))}</p>`
-        : ''}
-    </figure>`;
-}
-
-/* An answer renders as a composition when it has images and as a line of text
-   when it does not, and the two sit in the same list without argument.
-
-   That fallback is the feature's most important property. An agent with no way
-   to fetch images makes no illustrate_answer calls, and this screen renders
-   exactly as it did before the gallery existed — no empty frames, nothing
-   missing, nothing broken. */
-function resultAnswer(label, answer, images) {
-  if (answer === null || answer === undefined) return '';
-  if (images && images.length) return composition(label, answer, images);
-  return `<p class="results__answer"><span>${escapeHtml(label)}</span>${escapeHtml(answer)}</p>`;
-}
-
-export function renderResults(doc) {
-  const judged = doc.rounds.filter((r) => r.state === 'judged');
-  const good = goodVerdict(doc.mode);
-  const hits = judged.filter((r) => r.verdict === good).length;
-
-  const headline = doc.mode === 'quiz'
-    ? `<p class="results__verdict ${hits >= QUIZ_PASS ? 'is-pass' : 'is-fail'}">${
-        hits >= QUIZ_PASS ? 'PASSED' : 'NOT PASSED'}</p>
-       <p class="results__rate">${hits} of ${judged.length} matched — ${QUIZ_PASS} needed</p>`
-    /* Nothing was scored, so nothing is scored here. */
-    : isWatching(doc)
-      ? `<p class="results__rate">${judged.length} readings</p>`
-      : `<p class="results__rate">${hits} of ${judged.length} landed</p>`;
-
-  const rows = doc.rounds.map((round, i) => {
-    if (round.state !== 'judged') return '';
-    const agentLabel = labelFor('agent', round.agentTarget, doc.mode);
-    const humanLabel = labelFor('human', round.humanTarget, doc.mode);
-    const agentImages = imagesFor(round, 'agent');
-    const humanImages = imagesFor(round, 'human');
-    const illustrated = Boolean(agentImages || humanImages);
-    return `<article class="results__round" data-verdict="${round.verdict}" data-illustrated="${illustrated}">
-      <h3>${i + 1}. ${escapeHtml(round.question)}</h3>
-      ${resultAnswer(agentLabel, round.agentAnswer, agentImages)}
-      ${resultAnswer(humanLabel, round.humanAnswer, humanImages)}
-      ${round.verdict ? `<p class="results__mark">${round.verdict}</p>` : ''}
-    </article>`;
-  }).join('\n');
-
-  return `<section class="results">
-    <header class="results__head">
-      <h2 class="results__title">${
-        doc.mode === 'quiz' ? 'How well you know each other'
-          : isWatching(doc) ? 'What your agent made of you'
-          : 'How you saw each other'}</h2>
-      ${headline}
-    </header>
-    ${rows}
-    <div class="results__keep">
-      <button type="button" data-action="export">Keep this</button>
-      <p class="results__note">Three files, downloaded to this machine. Nothing
-        here has ever left it.</p>
-    </div>
-  </section>`;
-}
-
-/* The offer. Rendered BELOW the round, never instead of it.
-
-   The draft took over the stage at the grant moment, which meant you never saw
-   round 4's two answers or its verdict — the reveal you had just earned was
-   replaced by an offer. Additive here; the moment comes after the click. */
-export function renderGrant(doc) {
-  const watching = isWatching(doc);
-  return `<section class="grant">
-    <p class="grant__label">${watching
-      ? `${DOSSIER_ROUND} rounds read`
-      : `round ${DOSSIER_ROUND} is judged`}</p>
-    <h3 class="grant__title">Your agent has been reading you blind.</h3>
-    <p class="grant__body">You can open the dossier to it — ${watching
-      ? 'everything it has said about you so far, gathered in one place'
-      : 'every round so far, both columns, with your verdicts'}. It is the only
-      way it learns anything about you that it did not guess. There is no tool it
-      can call to take this; the grant is yours alone.</p>
-    <div class="grant__controls">
-      <button type="button" data-action="grant">Open the dossier</button>
-    </div>
-    <p class="grant__note">Or press Next round and keep it closed. That is a real
-      choice, and ${watching ? 'the reading goes on' : 'the game plays on'} either way.</p>
-  </section>`;
-}
-
-/* The transmission. The second signature moment, and the most WebMCP-native
-   beat in the game: the agent's body grows mid-session because a human clicked.
-
-   No new hue — cyan still means committed, amber still means revealed. The
-   moment is carried by the ground lifting, the verb resolving in mono at
-   display scale, and the status bar's tool count ticking 5 -> 6 on its own. */
+/* The transmission. The most WebMCP-native beat in the game: the agent's body
+   grows because a human closed a sitting. No new hue. */
 export function renderGranted(doc) {
   const before = toolNamesFor(doc.mode, 1);
   const after = toolNamesFor(doc.mode, 2);
@@ -413,13 +406,54 @@ export function renderGranted(doc) {
       <span class="transmission__to">${after.length} tools</span>
     </p>
 
-    <p class="transmission__body">Its body grew mid-session because you clicked.
-      Nothing it could call would have done this.</p>
+    <p class="transmission__body">Your first sitting is closed, and its body grew because you
+      closed it. From now on it can read what you choose to open. Nothing it could call would
+      have done this.</p>
 
     <div class="transmission__controls">
       <button type="button" data-action="dismiss">Continue</button>
     </div>
   </section>`;
+}
+
+/* ---- the keepsake ---------------------------------------------------------- */
+
+function pushImages(lines, images) {
+  if (!images || !images.length) return;
+  const parts = images.map((image, i) => {
+    const label = [image.credit, image.license].filter(Boolean).join(', ') || `image ${i + 1}`;
+    return `[${label}](${image.url})`;
+  });
+  lines.push(`  - illustrated by: ${parts.join(' · ')}`);
+}
+
+function markdownRounds(lines, rounds, mode) {
+  for (const [i, round] of rounds.entries()) {
+    if (round.state !== 'judged' && round.state !== 'revealed') continue;
+    lines.push(`### ${i + 1}. ${round.question}`, '');
+    lines.push(`- **${labelFor('agent', round.agentTarget, mode)}** — ${round.agentAnswer}`);
+    if (round.agentBecause) lines.push(`  - because: ${round.agentBecause}`);
+    pushImages(lines, round.agentImages);
+    if (round.humanAnswer !== null) {
+      lines.push(`- **${labelFor('human', round.humanTarget, mode)}** — ${round.humanAnswer}`);
+    }
+    if (round.verdict) lines.push(`- ${VERDICT_LABELS[round.verdict] || round.verdict}${round.correction ? ` — ${round.correction}` : ''}`);
+    lines.push('');
+  }
+}
+
+export function renderPortrait(doc) {
+  const lines = [`# Mirror — ${MODE_TITLES[doc.mode]}`, '', `Level ${doc.level}. ${doc.history.length} ${
+    doc.history.length === 1 ? 'sitting' : 'sittings'} closed.`, ''];
+  for (const sitting of doc.history) {
+    lines.push(`## Sitting ${sitting.n} — ${sitting.title} (${sitting.grant})`, '');
+    markdownRounds(lines, sitting.rounds, sitting.mode);
+  }
+  if (inSitting(doc)) {
+    lines.push('## Sitting in play', '');
+    markdownRounds(lines, doc.rounds, doc.mode);
+  }
+  return lines.join('\n');
 }
 
 /* The shell asks for one thing and gets whichever screen is current.
@@ -429,6 +463,7 @@ export function renderGranted(doc) {
    journey export, which is evidence. */
 export function renderGame(doc, { transmissionSeen } = {}) {
   if (justGranted(doc) && transmissionSeen !== doc.version) return renderGranted(doc);
-  if (isComplete(doc)) return renderResults(doc);
-  return renderRound(doc) + (atGrantMoment(doc) ? renderGrant(doc) : '');
+  if (!inSitting(doc)) return renderBetween(doc);
+  if (isComplete(doc)) return renderClose(doc);
+  return renderRound(doc);
 }
