@@ -91,3 +91,33 @@ test('the submit schema is shaped by the game once one exists', () => {
   const after = buildTools(ctx).find((t) => t.name === 'submit_answer');
   assert.ok('images' in after.inputSchema.properties, 'the slot arrives with the game');
 });
+
+/* The transition the live run broke. An agent arrives, gets five verbs, and
+   the human then picks Perspective — which changes submit_answer's schema
+   without changing the tool count. What the agent HOLDS has to change too. */
+test('after the human picks a game, the agent holds that game’s submit_answer', async () => {
+  const registered = new Map();
+  const mc = {
+    registerTool: async (t) => { registered.set(t.name, t); },
+    unregisterTool: async (name) => { registered.delete(name); }
+  };
+
+  const ctx = arrivingCtx();
+  let onClient = buildTools(ctx);
+  await registerTools(mc, onClient);
+  assert.equal(registered.size, 5);
+  assert.ok(!('images' in registered.get('submit_answer').inputSchema.properties),
+    'no game yet, so no image slot');
+
+  ctx.start('perspective');                       // the human clicks Perspective
+  const rebuilt = buildTools(ctx);
+  const { reregister } = await import('../src/webmcp.js');
+  await reregister(mc, rebuilt, onClient);
+  onClient = rebuilt;
+
+  const held = registered.get('submit_answer');
+  assert.ok('images' in held.inputSchema.properties,
+    'the agent could not commit a read because its tool had nowhere to put the images');
+  assert.ok(held.inputSchema.required.includes('images'));
+  assert.equal(registered.size, 5, 'the count is unchanged — only the body moved');
+});

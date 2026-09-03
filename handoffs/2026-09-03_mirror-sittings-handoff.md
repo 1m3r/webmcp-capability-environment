@@ -157,6 +157,16 @@ old `p2.mirror.v1` key is dead and is not migrated.
 
 ## 6. Traps already paid for
 
+- **A name is not a tool.** `reregister` used to skip any tool whose NAME was
+  already registered, which was correct in v1 where schemas never changed. This
+  game shapes `submit_answer` from the mode, and tools register on arrival
+  before a game is picked — so the first live agent was left holding a
+  submit_answer with no image slot, could not commit a read, and said so on the
+  shared screen. `reregister` now compares bodies (`signatureOf`), drops and
+  re-registers what changed, and unregisters what the game no longer offers.
+  The shell tracks tool OBJECTS, and `surfaceKey` watches mode as well as tier,
+  because picking a game moves the mode without moving the tier.
+
 - **The floor checker reports one easing** because it reads `app.css` alone and
   the four curves live in `design-system/tokens.css`. The stylesheet meets the
   floor. Do not "fix" this by inlining curves.

@@ -110,3 +110,8 @@ and starts as new applications rather than as more levels of this one.
   `get_portrait_history` (reads by question across opened sittings). One verb
   per close, top tier 4. 198 tests. Floor checker reports one easing because
   it reads `app.css` alone; the four curves live in `tokens.css`.
+- 2026-09-03 · First live run of the sittings build found a real defect that
+  205 tests had not: `reregister` skipped tools by NAME, so the schema change
+  from picking a game never reached the agent and Perspective was unplayable.
+  Fixed by comparing tool bodies and unregistering withdrawn verbs. The agent
+  diagnosed it correctly on the shared screen before any human did.

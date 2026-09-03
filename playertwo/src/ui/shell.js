@@ -23,7 +23,18 @@ document.body.dataset.instrument = params.get('instrument') === 'on' ? 'on' : 'o
 let doc = load();
 let found = null;
 let registration = { method: 'none', registered: 0, errors: [] };
-let registeredNames = [];
+
+/* What the agent is currently holding, as tool OBJECTS rather than names.
+   reregister compares bodies, because this game shapes submit_answer's schema
+   from the mode and a name alone cannot say whether a registration is stale. */
+let registeredTools = [];
+
+/* Everything that changes the shape of the tool surface. The mode chooses
+   submit_answer's schema and the level chooses which verbs exist, so a change
+   in either has to reach the client. Tier alone was not enough: picking a game
+   moves the mode without moving the tier, and that is exactly the transition
+   that shipped an agent a submit_answer it could not put images into. */
+const surfaceKey = (d) => `${d ? d.mode : 'none'}:${game.tierFor(d)}`;
 
 /* The one number the shell holds that is not in the document. The transmission
    fires on the version that flipped the tier and is dismissed by matching it,
@@ -136,13 +147,13 @@ function loadImage(url) {
 const ctx = {
   getDoc: () => doc,
   setDoc: (next) => {
-    const tierBefore = game.tierFor(doc);
+    const surfaceBefore = surfaceKey(doc);
     doc = next;
     save();
     settlePerspective();
     render();
     waits.notify(doc.version);
-    if (game.tierFor(doc) !== tierBefore) syncTools();
+    if (surfaceKey(doc) !== surfaceBefore) syncTools();
   },
   now: () => Date.now(),
   waits,
@@ -350,11 +361,11 @@ el('export').addEventListener('click', exportGame);
 async function syncTools() {
   if (!found) return;
   const tools = game.buildTools(ctx);
-  const result = await reregister(found.mc, tools, registeredNames);
-  registeredNames = tools.map((t) => t.name);
+  const result = await reregister(found.mc, tools, registeredTools);
+  registeredTools = tools;
   registration = {
     method: result.method,
-    registered: registeredNames.length,
+    registered: registeredTools.length,
     errors: registration.errors.concat(result.errors)
   };
   renderStatus();
@@ -371,7 +382,7 @@ async function boot() {
   }
   const tools = game.buildTools(ctx);
   registration = await registerTools(found.mc, tools);
-  registeredNames = tools.map((t) => t.name);
+  registeredTools = tools;
   renderStatus();
   console.log(`[mirror] ${registration.registered} tools via ${registration.method} on ${found.entry}`);
   if (registration.errors.length) console.warn('[mirror]', registration.errors);
