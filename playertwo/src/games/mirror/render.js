@@ -12,7 +12,7 @@
 
 import {
   inSitting, isComplete, isPerspective, readyToReveal, lastRefusal, justGranted,
-  decksAvailable, toolNamesFor,
+  decksAvailable, toolNamesFor, tierFor, pendingProposal, acceptedProposal,
   VERDICTS, VERDICT_LABELS, goodVerdict, GRANTS, GRANT_LABELS
 } from './game.js';
 import { QUIZ_PASS } from './questions.js';
@@ -194,7 +194,7 @@ export function renderRound(doc) {
       ${progress(doc)}
       <p class="round__count">Sitting ${sitting} · round ${doc.roundIndex + 1} of ${doc.rounds.length}</p>
       <h2 class="round__question">${escapeHtml(round.question)}</h2>
-      <p class="round__subject">${escapeHtml(agentLabel.toLowerCase())}</p>
+      <p class="round__subject">${escapeHtml(agentLabel.toLowerCase())}${round.proposed ? ' · its own question' : ''}</p>
     </header>
 
     ${refusalPanel(doc)}
@@ -317,6 +317,23 @@ export function renderBetween(doc) {
       ${sitting.rounds.map((round, i) => roundRow(round, sitting.mode, i)).join('\n')}
     </section>`).join('\n');
 
+  const pending = pendingProposal(doc);
+  const carried = acceptedProposal(doc);
+  const proposal = pending
+    ? `<section class="proposal">
+      <p class="proposal__label">your agent proposes a question for the next sitting</p>
+      <p class="proposal__text">${escapeHtml(pending.text)}</p>
+      <div class="proposal__controls">
+        <button type="button" data-action="accept_proposal">Ask it</button>
+        <button type="button" data-action="decline_proposal">Not this one</button>
+      </div>
+      <p class="proposal__note">Accepted, it becomes the last round of the next sitting. There is no
+        tool that can ask it without you.</p>
+    </section>`
+    : carried
+      ? `<p class="proposal__carried">The next sitting ends on your agent’s question: <em>${escapeHtml(carried.text)}</em></p>`
+      : '';
+
   const count = doc.history.length;
   return `<section class="between">
     <header class="between__head">
@@ -326,6 +343,8 @@ export function renderBetween(doc) {
         ? 'Open a sitting. Your agent reads you through one deck, and at the end you decide what it keeps.'
         : 'Open another. Whatever you opened at the last close is what your agent reads before it answers.'}</p>
     </header>
+
+    ${proposal}
 
     <div class="decks">
       ${decks}
@@ -382,9 +401,19 @@ export function renderStart({ entry = null, tools = 0 } = {}) {
 
 /* The transmission. The most WebMCP-native beat in the game: the agent's body
    grows because a human closed a sitting. No new hue. */
+const GRANTED_BODY = {
+  2: 'Your first sitting is closed, and its body grew because you closed it. From now on it can ' +
+     'read what you choose to open. Nothing it could call would have done this.',
+  3: 'Two sittings closed. It can now put one question of its own on the table for the next ' +
+     'sitting — and only you can decide whether it gets asked.',
+  4: 'Three sittings closed. It can now read how its reads of you have moved, question by ' +
+     'question, across everything you have opened to it.'
+};
+
 export function renderGranted(doc) {
-  const before = toolNamesFor(doc.mode, 1);
-  const after = toolNamesFor(doc.mode, 2);
+  const tier = tierFor(doc);
+  const before = toolNamesFor(doc.mode, tier - 1);
+  const after = toolNamesFor(doc.mode, tier);
   const added = after.filter((n) => !before.includes(n));
 
   const tools = after.map((name) => {
@@ -406,9 +435,7 @@ export function renderGranted(doc) {
       <span class="transmission__to">${after.length} tools</span>
     </p>
 
-    <p class="transmission__body">Your first sitting is closed, and its body grew because you
-      closed it. From now on it can read what you choose to open. Nothing it could call would
-      have done this.</p>
+    <p class="transmission__body">${escapeHtml(GRANTED_BODY[tier] || GRANTED_BODY[2])}</p>
 
     <div class="transmission__controls">
       <button type="button" data-action="dismiss">Continue</button>

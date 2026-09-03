@@ -23,14 +23,22 @@ export const CORE_TOOLS = [
 export function toolNamesFor(mode, tier) {
   const names = CORE_TOOLS.slice();
   if (tier >= 2) names.push('get_dossier');
+  if (tier >= 3) names.push('propose_question');
+  if (tier >= 4) names.push('get_portrait_history');
   return names;
 }
 
+/* The last tier that adds a verb. Beyond it, level keeps counting and the
+   body stays the same size. */
+export const TOP_TIER = 4;
+
 /* Tier is derived from level, never stored, so the two cannot disagree. Level
    is the number of sittings closed plus one; the dossier opens at level 2,
-   which is the first moment there is a closed sitting to read. */
+   which is the first moment there is a closed sitting to read. Each close up
+   to TOP_TIER hands the agent one more verb. */
 export function tierFor(doc) {
-  return doc && doc.level >= 2 ? 2 : 1;
+  if (!doc) return 1;
+  return Math.min(Math.max(doc.level, 1), TOP_TIER);
 }
 
 export const VERDICTS = {
@@ -72,7 +80,8 @@ export function isPerspective(doc) {
    moment the camera wants it. */
 const CLEARS_REFUSAL = new Set([
   'agent_submit', 'human_submit', 'reveal', 'judge', 'next',
-  'open_sitting', 'close_sitting', 'abandon_sitting'
+  'open_sitting', 'close_sitting', 'abandon_sitting',
+  'propose', 'accept_proposal', 'decline_proposal'
 ]);
 
 export function lastRefusal(doc) {
@@ -114,6 +123,7 @@ export function createDoc(now = 0, { mode = 'perspective' } = {}) {
     mode,
     level: 1,
     history: [],
+    proposals: [],
     deckId: null,
     rounds: [],
     roundIndex: 0,
@@ -152,12 +162,25 @@ export function readyToReveal(doc, round) {
 
 /* The tier just flipped, so the page owes the transmission.
 
-   Keyed on the close that took the level to 2 — derived from the log, so it
-   needs no state field, and it fires exactly once per portrait. */
+   Keyed on a close that moved the level into a tier that adds a verb — derived
+   from the log, so it needs no state field. Fires on the first three closes
+   and never again. */
 export function justGranted(doc) {
   const last = doc.log[doc.log.length - 1];
   return Boolean(last && last.action === 'close_sitting' && last.outcome === 'ok')
-    && doc.level === 2;
+    && doc.level >= 2 && doc.level <= TOP_TIER;
+}
+
+/* Proposals. At level 3 the agent may propose ONE question for the next
+   sitting. It proposes; a human click accepts or declines; an accepted question
+   is appended to the next sitting opened. The same pattern as the probe's
+   rule-change request: the agent asks, only a human click mutates play. */
+export function pendingProposal(doc) {
+  return (doc.proposals || []).find((p) => p.status === 'pending') || null;
+}
+
+export function acceptedProposal(doc) {
+  return (doc.proposals || []).find((p) => p.status === 'accepted' && !p.used) || null;
 }
 
 /* The decks this portrait can open right now, and the ones it cannot yet. */
@@ -178,7 +201,10 @@ const ACTOR = {
   next: 'human',
   open_sitting: 'human',
   close_sitting: 'human',
-  abandon_sitting: 'human'
+  abandon_sitting: 'human',
+  propose: 'agent',
+  accept_proposal: 'human',
+  decline_proposal: 'human'
 };
 
 export function reduce(doc, action, now = 0) {
@@ -234,11 +260,61 @@ export function reduce(doc, action, now = 0) {
         return refuse('DECK_LOCKED',
           `refused: ${deck.title} opens at level ${deck.level} — this portrait is at level ${doc.level}.`);
       }
+      const rounds = freshRounds(doc.mode, deck.id);
+      const carried = acceptedProposal(doc);
+      let proposals = doc.proposals || [];
+      if (carried) {
+        rounds.push({
+          questionId: `proposed-${carried.n}`,
+          question: carried.text,
+          agentTarget: 'human',
+          humanTarget: doc.mode === 'both' ? 'agent' : doc.mode === 'quiz' ? 'human' : null,
+          proposed: true,
+          state: 'posed',
+          agentAnswer: null,
+          agentBecause: '',
+          agentImages: null,
+          humanAnswer: null,
+          verdict: null,
+          correction: ''
+        });
+        proposals = proposals.map((p) => (p === carried ? { ...p, used: true } : p));
+      }
       return accept({
         deckId: deck.id,
-        rounds: freshRounds(doc.mode, deck.id),
-        roundIndex: 0
-      }, `sitting ${doc.history.length + 1} opened — ${deck.title}`);
+        rounds,
+        roundIndex: 0,
+        proposals
+      }, `sitting ${doc.history.length + 1} opened — ${deck.title}${carried ? ', with your agent’s question' : ''}`);
+    }
+
+    case 'propose': {
+      if (tierFor(doc) < 3) {
+        return refuse('NOT_YET',
+          'refused: proposing a question opens at level 3 — two sittings closed. Play them first.');
+      }
+      if (!answer) {
+        return refuse('EMPTY_PROPOSAL', 'refused: a proposed question cannot be empty.');
+      }
+      if (pendingProposal(doc)) {
+        return refuse('ONE_AT_A_TIME',
+          'refused: you have already proposed a question and your teammate has not answered it yet. One at a time.');
+      }
+      const proposals = (doc.proposals || []).concat([{
+        n: (doc.proposals || []).length + 1, text: answer, status: 'pending', used: false, at: now
+      }]);
+      return accept({ proposals }, `proposed: ${answer}`);
+    }
+
+    case 'accept_proposal':
+    case 'decline_proposal': {
+      const pending = pendingProposal(doc);
+      if (!pending) {
+        return refuse('NO_PROPOSAL', 'refused: your agent has not proposed a question, so there is nothing to answer.');
+      }
+      const status = action.type === 'accept_proposal' ? 'accepted' : 'declined';
+      const proposals = doc.proposals.map((p) => (p === pending ? { ...p, status } : p));
+      return accept({ proposals }, `${status} your agent’s question: ${pending.text}`);
     }
 
     case 'agent_submit': {
@@ -393,6 +469,13 @@ export function reduce(doc, action, now = 0) {
   }
 }
 
+/* Where the agent's proposal stands, for the payload it reads every round. */
+function proposalStatus(doc) {
+  if (pendingProposal(doc)) return 'pending — your teammate has not answered it yet';
+  if (acceptedProposal(doc)) return 'accepted — it will be asked in the next sitting';
+  return 'none — you may propose one question for the next sitting';
+}
+
 /* The single next thing this agent should do. Derived, never stored. */
 function nextMoveFor(doc, round) {
   if (round.state === 'posed') return 'submit_answer — it is your turn, and you go first';
@@ -425,6 +508,7 @@ export function projectForAgent(doc) {
       sittingsClosed: doc.history.length,
       state: 'between_sittings',
       tier: tierFor(doc),
+      ...(tierFor(doc) >= 3 ? { yourProposal: proposalStatus(doc) } : {}),
       yourMove: doc.history.length === 0
         ? 'wait_for_game_update — your teammate is opening the first sitting'
         : 'wait_for_game_update — your teammate is opening the next sitting'
@@ -451,6 +535,7 @@ export function projectForAgent(doc) {
     youHaveAnswered: round.agentAnswer !== null,
     teammateHasAnswered: round.humanAnswer !== null,
     tier: tierFor(doc),
+    ...(tierFor(doc) >= 3 ? { yourProposal: proposalStatus(doc) } : {}),
     yourMove: nextMoveFor(doc, round)
   };
   if (!revealed) return base;

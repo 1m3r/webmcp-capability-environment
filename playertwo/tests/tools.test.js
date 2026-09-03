@@ -45,6 +45,15 @@ test('tier 2 adds get_dossier and nothing else, in every game', () => {
   }
 });
 
+test('the body has at most eight verbs, and the ladder is one verb per tier', () => {
+  for (const mode of MODES) {
+    assert.deepEqual(toolNamesFor(mode, 1).length, 5);
+    assert.deepEqual(toolNamesFor(mode, 3).slice(5), ['get_dossier', 'propose_question']);
+    assert.deepEqual(toolNamesFor(mode, 4).slice(5), ['get_dossier', 'propose_question', 'get_portrait_history']);
+    assert.deepEqual(toolNamesFor(mode, 9), toolNamesFor(mode, 4));
+  }
+});
+
 test('every tool carries the shape a WebMCP client expects', () => {
   for (const tool of harness().tools()) {
     assert.equal(typeof tool.name, 'string');

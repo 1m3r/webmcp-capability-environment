@@ -28,7 +28,18 @@ let registeredNames = [];
 /* The one number the shell holds that is not in the document. The transmission
    fires on the version that flipped the tier and is dismissed by matching it,
    so a dismissal costs no state field and leaves no event in the journey. */
-let transmissionSeen = null;
+let transmissionSeen = doc ? loadSeen(doc.mode) : null;
+
+/* Persisted beside the portrait, so a reload after a close does not replay
+   the moment. Still not in the document: the journey stays unpolluted. */
+function seenKey(mode) { return `${game.storageKeyFor(mode)}.seen`; }
+function loadSeen(mode) {
+  try { const v = localStorage.getItem(seenKey(mode)); return v === null ? null : Number(v); } catch { return null; }
+}
+function markSeen() {
+  transmissionSeen = doc.version;
+  try { localStorage.setItem(seenKey(doc.mode), String(doc.version)); } catch { /* fine */ }
+}
 
 /* Which screen the stage is currently showing. The stage scrolls internally, so
    a new screen inherits the last one's scroll offset. Reset when this changes. */
@@ -242,7 +253,7 @@ function render() {
 
 function chooseGame(mode) {
   doc = readPortrait(mode) || game.createDoc(Date.now(), { mode });
-  transmissionSeen = null;
+  transmissionSeen = loadSeen(mode);
   lastScreen = null;
   save();
   settlePerspective();
@@ -266,9 +277,10 @@ stage.addEventListener('click', (event) => {
   if (action === 'next') dispatch({ type: 'next' });
   if (action === 'open_sitting') dispatch({ type: 'open_sitting', deckId: button.dataset.deck });
   if (action === 'close_sitting') dispatch({ type: 'close_sitting', grant: button.dataset.grant });
+  if (action === 'accept_proposal' || action === 'decline_proposal') dispatch({ type: action });
   /* Not a reducer action: dismissing the transmission changes nothing about the
      game, and an event for it would be noise in the run record. */
-  if (action === 'dismiss') { transmissionSeen = doc.version; render(); }
+  if (action === 'dismiss') { markSeen(); render(); }
   if (action === 'export') exportGame();
 });
 

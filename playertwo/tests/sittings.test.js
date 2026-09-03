@@ -76,16 +76,14 @@ test('the tier is derived from the level and flips exactly at the first close', 
   assert.equal(tierFor(doc), 2);
   doc = close(playOut(open(doc, 'weather-gods')));
   assert.equal(doc.level, 3);
-  assert.equal(tierFor(doc), 2, 'there is no tier 3 yet');
+  assert.equal(tierFor(doc), 3, 'the third level adds the third verb');
 });
 
-test('the transmission fires on the first close and never again', () => {
+test('the transmission fires on a close that adds a verb, and is over once anything else happens', () => {
   let doc = close(playOut(open(createDoc(0, { mode: 'both' }))));
   assert.equal(justGranted(doc), true);
   doc = reduce(doc, { type: 'say', text: 'thank you' }).doc;
   assert.equal(justGranted(doc), false, 'the moment is over once anything else happens');
-  doc = close(playOut(open(doc, 'weather-gods')));
-  assert.equal(justGranted(doc), false, 'the second close adds no verb, so there is no moment');
 });
 
 test('the second sitting can open a level-2 deck, and locked decks stay locked', () => {
@@ -121,6 +119,7 @@ test('between sittings the agent is told to wait for the next one', () => {
   assert.equal(later.level, 2);
   assert.equal(later.tier, 2);
   assert.match(later.yourMove, /next sitting/);
+  assert.ok(!('yourProposal' in later), 'nothing about proposals before level 3');
 });
 
 test('inside a sitting the projection names the sitting and the level', () => {

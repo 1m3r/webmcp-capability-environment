@@ -1093,3 +1093,29 @@ body[data-instrument="off"] .panel { gap: var(--space-3); }
   .decks, .close__grants, .start__modes { grid-template-columns: 1fr; }
   .sitting__head { flex-direction: column; align-items: start; }
 }
+
+/* ---- the proposal --------------------------------------------------------- */
+
+/* The agent put a question on the table. It is an offer, not a state — no
+   accent — and the two controls are the only way it gets asked. */
+.proposal {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--rule);
+  border-radius: 0.75rem;
+  background: var(--ground-raised);
+  animation: land var(--dur-reveal) var(--ease-enter) both;
+}
+.proposal__label {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+  text-transform: lowercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 var(--space-1);
+}
+.proposal__text { font-family: var(--font-display); font-size: var(--step-2); line-height: 1.15; margin: 0 0 var(--space-3); text-wrap: balance; }
+.proposal__controls { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.proposal__note { font-family: var(--font-mono); font-size: var(--step--1); color: var(--ink-dim); margin: var(--space-2) 0 0; max-width: 58ch; }
+.proposal__carried { font-family: var(--font-mono); font-size: var(--step--1); color: var(--ink-dim); margin: 0 0 var(--space-4); }
+.proposal__carried em { font-style: normal; color: var(--ink); }

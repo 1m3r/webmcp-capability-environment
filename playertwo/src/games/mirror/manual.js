@@ -129,6 +129,28 @@ go further from it. A sealed sitting shows you nothing on purpose.
 Nothing from the sitting in play is ever in the dossier. It arrives when they
 close it, if they open it.`;
 
+const TIER_3 = `
+
+YOU MAY PROPOSE A QUESTION
+
+Two sittings are closed, and propose_question is now yours. Once per sitting
+you may put ONE question on the table for the next sitting. Your teammate
+accepts or declines it on the shared screen; if accepted it is asked as the
+last round of the next sitting they open, and you answer it like any other.
+
+Propose something the decks have not asked and you genuinely want to know how
+they would answer. You cannot pose a question yourself — there is no tool for
+that — you can only propose one, and the click is theirs.`;
+
+const TIER_4 = `
+
+THE HISTORY IS OPEN
+
+get_portrait_history returns your reads of them by question, across every
+sitting they have opened to you, oldest first. A question asked twice shows
+you whether your read moved and whether the move landed. Read it when a deck
+you have played before comes round again.`;
+
 /* Read on arrival, before the human has picked a game. The ordering and the
    wait loop are true in every game and are what the agent most needs first; the
    game-specific half arrives when the game does. */
@@ -151,6 +173,9 @@ const BY_MODE = { perspective: PERSPECTIVE, both: BOTH, quiz: QUIZ };
 
 export function manualFor(tier, mode = 'perspective') {
   if (mode === null) return CORE + NO_MODE;
-  const base = CORE + (BY_MODE[mode] || '');
-  return tier >= 2 ? base + TIER_2 : base;
+  let out = CORE + (BY_MODE[mode] || '');
+  if (tier >= 2) out += TIER_2;
+  if (tier >= 3) out += TIER_3;
+  if (tier >= 4) out += TIER_4;
+  return out;
 }

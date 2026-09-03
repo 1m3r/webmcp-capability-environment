@@ -16,6 +16,7 @@ import {
 } from './game.js';
 import { manualFor } from './manual.js';
 import { buildDossier } from './dossier.js';
+import { buildHistory } from './history.js';
 
 export { toolNamesFor };
 
@@ -289,8 +290,52 @@ export function buildTools(ctx) {
     })
   };
 
+  /* Level 3. The agent proposes; a human click accepts or declines; an accepted
+     question is appended to the next sitting. It cannot ask a question itself —
+     there is no tool that poses one — it can only put one on the table. */
+  const proposeQuestion = {
+    name: 'propose_question',
+    description:
+      'Proposes one question for the NEXT sitting. Your teammate accepts or declines it on the ' +
+      'shared screen; if accepted, it is asked as the last round of the next sitting they open. ' +
+      'One proposal at a time. Ask something the decks have not — something you actually want ' +
+      'to know how they would answer.',
+    inputSchema: {
+      type: 'object',
+      properties: { text: { type: 'string', description: 'The question, phrased about "this person".' } },
+      required: ['text']
+    },
+    execute: needsGame(async (input) => {
+      const { text: question } = unwrap(input);
+      const result = apply({ type: 'propose', text: question });
+      if (!result.ok) return text(result.message);
+      return text(
+        'Proposed. Your teammate will see it on the shared screen between sittings and accept or ' +
+        'decline it there. Call wait_for_game_update as usual.'
+      );
+    })
+  };
+
+  /* Level 4. The same channel as the dossier, seen lengthwise. */
+  const getPortraitHistory = {
+    name: 'get_portrait_history',
+    description:
+      'Returns how your reads of your teammate have moved, question by question, across every ' +
+      'sitting they have opened to you. Questions asked more than once come first. Nothing from ' +
+      'the sitting in play is in it.',
+    annotations: { readOnlyHint: true },
+    inputSchema: { type: 'object', properties: {} },
+    execute: needsGame(async () => {
+      apply({ type: 'read', text: 'get_portrait_history' });
+      return text(buildHistory(ctx.getDoc()));
+    })
+  };
+
   const tools = [getRound, waitForGameUpdate, submitAnswer, say, getFieldManual];
-  if (tierFor(doc) >= 2) tools.push(getDossier);
+  const tier = tierFor(doc);
+  if (tier >= 2) tools.push(getDossier);
+  if (tier >= 3) tools.push(proposeQuestion);
+  if (tier >= 4) tools.push(getPortraitHistory);
   return tools;
 }
 
