@@ -6,6 +6,8 @@
 
 **Architecture:** The reducer keeps its shape (`doc.rounds[doc.roundIndex]` is the sitting in play) and gains `doc.history` (closed sittings, each with its grant) and `doc.level`. Three modes are three games sharing the engine: `perspective` (agent reads the human, images at commit, human responds *That's me / Not quite* with an optional correction), `both` (each reads the other, text), `quiz` (facts, one knows one guesses). `get_dossier` reads only *granted* history and never the sitting in play. Tier is derived from level. Everything stays pure, DOM-free, and asserted in Node.
 
+**Status:** executed 3 September 2026, 18:15–19:50 CEST, inline, on `feat/mirror-sittings`. 179 tests. Not deployed.
+
 **Tech Stack:** Vanilla ES modules, zero dependencies, `node --test`. Branch `feat/mirror-sittings` off `feat/player-two`.
 
 Source: `docs/MIRROR-DESIGN-REVIEW.md` §2–§4.
@@ -57,9 +59,9 @@ export const QUIZ_PASS = 4;                 // of 6
 ```
 Deck shape: `{ id, title, level, questions: [{ id, text, target? }] }`. Perspective decks are illustrable (things, places, weather, creatures); verbal questions live in `both`. Every perspective deck carries one uncomfortable question. Quiz questions carry `target: 'human' | 'agent'` and alternate human-first.
 
-- [ ] Write failing tests: `decksFor('perspective')` has ≥3 decks with 5 questions each; `deckUnlocked` respects level; `roundPlan('perspective','first-light')` gives 5 rounds with `agentTarget:'human', humanTarget:null`; `roundPlan('both', …)` gives `human`/`agent`; `roundPlan('quiz','daily')` alternates and both targets equal; unknown deck throws.
-- [ ] Implement. Run `node --test tests/game.test.js`.
-- [ ] Commit `feat(mirror): decks per mode, five rounds, level-gated`.
+- [x] Write failing tests: `decksFor('perspective')` has ≥3 decks with 5 questions each; `deckUnlocked` respects level; `roundPlan('perspective','first-light')` gives 5 rounds with `agentTarget:'human', humanTarget:null`; `roundPlan('both', …)` gives `human`/`agent`; `roundPlan('quiz','daily')` alternates and both targets equal; unknown deck throws.
+- [x] Implement. Run `node --test tests/game.test.js`.
+- [x] Commit `feat(mirror): decks per mode, five rounds, level-gated`.
 
 ### Task 2: The reducer — sittings, level, verdicts, images at commit
 
@@ -101,10 +103,10 @@ Round shape: `{ questionId, question, agentTarget, humanTarget, state, agentAnsw
 
 Projection (`projectForAgent`): between sittings → `{ version, mode, level, sittingsClosed, state:'between_sittings', yourMove }`. In a sitting: as before plus `level`, `sitting: n`, no `answersAwaitingImages`; before the reveal carries neither answer, no `because`, no image url.
 
-- [ ] Write failing tests in the four files (see test list below).
-- [ ] Implement; delete `illustrate`, `grant_tier`, `set_answer_about_agent`, `isExcused`, `isWatching`, `canGrant`, `atGrantMoment`, `unillustrated`, `imagesFor`, `DOSSIER_ROUND`.
-- [ ] Run `node --test tests/game.test.js tests/sittings.test.js tests/perspective.test.js tests/images.test.js`.
-- [ ] Commit `feat(mirror): sittings, level, perspective verdicts, images at commit`.
+- [x] Write failing tests in the four files (see test list below).
+- [x] Implement; delete `illustrate`, `grant_tier`, `set_answer_about_agent`, `isExcused`, `isWatching`, `canGrant`, `atGrantMoment`, `unillustrated`, `imagesFor`, `DOSSIER_ROUND`.
+- [x] Run `node --test tests/game.test.js tests/sittings.test.js tests/perspective.test.js tests/images.test.js`.
+- [x] Commit `feat(mirror): sittings, level, perspective verdicts, images at commit`.
 
 ### Task 3: Tools — six verbs, image verification at the boundary
 
@@ -115,9 +117,9 @@ Projection (`projectForAgent`): between sittings → `{ version, mode, level, si
 
 `submit_answer` schema per mode: perspective `{ text, because, images[4] }` with `required: ['text','images']`; both `{ text, because }`; quiz `{ text }`. Execute: unwrap → normalise images → if 4, `await Promise.all(load)` → `rejected` = urls that failed → `apply({ type:'agent_submit', text, because, images, rejected })`. The reducer refuses and logs.
 
-- [ ] Tests: surface is 5 verbs at tier 1 and 6 at tier 2 for every mode; no forbidden verb; a failing `loadImage` produces a refusal naming the url, logged with actor agent; a passing one commits with 4 images; `get_field_manual` reflects `tierFor`.
-- [ ] Implement. Run the three test files.
-- [ ] Commit `feat(mirror): images travel with the answer and are verified at the boundary`.
+- [x] Tests: surface is 5 verbs at tier 1 and 6 at tier 2 for every mode; no forbidden verb; a failing `loadImage` produces a refusal naming the url, logged with actor agent; a passing one commits with 4 images; `get_field_manual` reflects `tierFor`.
+- [x] Implement. Run the three test files.
+- [x] Commit `feat(mirror): images travel with the answer and are verified at the boundary`.
 
 ### Task 4: Dossier and manual
 
@@ -125,8 +127,8 @@ Projection (`projectForAgent`): between sittings → `{ version, mode, level, si
 
 `buildDossier(doc)`: header, then per closed sitting: sealed → one line, kept → rounds with the good verdict only, open → every round with verdict and correction. Footer: "The sitting in play is not here and will not be until your teammate closes it." Never reads `doc.rounds`.
 
-- [ ] Tests: sealed sitting contributes no answer text; kept sitting carries only `me`/`landed`/`match` rounds; open sitting carries corrections; THE LEAK TEST: the sitting in play never appears, revealed or not; manual tier 1 never says `get_dossier`; perspective manual names `images`, `because`, corrections, and the three grants.
-- [ ] Implement. Commit `feat(mirror): dossier reads granted sittings only`.
+- [x] Tests: sealed sitting contributes no answer text; kept sitting carries only `me`/`landed`/`match` rounds; open sitting carries corrections; THE LEAK TEST: the sitting in play never appears, revealed or not; manual tier 1 never says `get_dossier`; perspective manual names `images`, `because`, corrections, and the three grants.
+- [x] Implement. Commit `feat(mirror): dossier reads granted sittings only`.
 
 ### Task 5: Renderers
 
@@ -141,15 +143,15 @@ Projection (`projectForAgent`): between sittings → `{ version, mode, level, si
 - `renderPortrait(doc)`: markdown over history + current.
 - Landing: "Five verbs on arrival. A sixth arrives when you close your first sitting."
 
-- [ ] Tests: secrecy for every pre-reveal state in every mode, including no `<img` and no `because` text before the reveal; controls round-trip for all three modes across a whole sitting, the close screen and the between screen (`PAGE_ONLY = export, dismiss, games`); the between screen offers only unlocked decks as enabled controls; the transmission fires after the first close and not the second.
-- [ ] Implement. Commit `feat(mirror): the portrait screen, the close, the perspective reveal`.
+- [x] Tests: secrecy for every pre-reveal state in every mode, including no `<img` and no `because` text before the reveal; controls round-trip for all three modes across a whole sitting, the close screen and the between screen (`PAGE_ONLY = export, dismiss, games`); the between screen offers only unlocked decks as enabled controls; the transmission fires after the first close and not the second.
+- [x] Implement. Commit `feat(mirror): the portrait screen, the close, the perspective reveal`.
 
 ### Task 6: Journey
 
 **Files:** Rewrite `tests/journey.test.js`.
 
-- [ ] A stub agent plays sitting 1 (5 rounds, images through `submit_answer`), the human closes it `open`, `get_dossier` appears, sitting 2 opens from a level-2 deck, the agent reads the dossier and it contains sitting 1's corrections and none of sitting 2's rounds. A second run closes `sealed` and the dossier carries no answer from it. The quiz journey passes at `QUIZ_PASS`. The restart-while-waiting test stays.
-- [ ] Commit `test(mirror): the journey crosses a sitting boundary`.
+- [x] A stub agent plays sitting 1 (5 rounds, images through `submit_answer`), the human closes it `open`, `get_dossier` appears, sitting 2 opens from a level-2 deck, the agent reads the dossier and it contains sitting 1's corrections and none of sitting 2's rounds. A second run closes `sealed` and the dossier carries no answer from it. The quiz journey passes at `QUIZ_PASS`. The restart-while-waiting test stays.
+- [x] Commit `test(mirror): the journey crosses a sitting boundary`.
 
 ### Task 7: Shell, page, stylesheet
 
@@ -163,13 +165,13 @@ Projection (`projectForAgent`): between sittings → `{ version, mode, level, si
 - Instrument: `?instrument=on` sets `body[data-instrument="on"]`; CSS hides `.log`, `#s-tier`, `#s-version` otherwise.
 - CSS: `.round--perspective .card` full width with the composition inside; `.response` row (input + two buttons); `.close__grants`; `.portrait__sitting`, `.decks`, `.deck[disabled]`; the instrument rules. No new hue.
 
-- [ ] Run the full suite. Run `node playertwo/server.mjs` and walk `?play=1`: start → three games; perspective → deck picker; the between screen with no history. Screenshot.
-- [ ] Commit `feat(mirror): shell for sittings, instrument layer, perspective reveal`.
+- [x] Run the full suite. Run `node playertwo/server.mjs` and walk `?play=1`: start → three games; perspective → deck picker; the between screen with no history. Screenshot.
+- [x] Commit `feat(mirror): shell for sittings, instrument layer, perspective reveal`.
 
 ### Task 8: Docs
 
-- [ ] `playertwo/README.md` rewritten around sittings and the three games; `docs/MIRROR-RUNBOOK.md` gets a note that the measurement moved to sitting 1 vs sitting 2; project `CLAUDE.md` log line.
-- [ ] Commit `docs: sittings`.
+- [x] `playertwo/README.md` rewritten around sittings and the three games; `docs/MIRROR-RUNBOOK.md` gets a note that the measurement moved to sitting 1 vs sitting 2; project `CLAUDE.md` log line.
+- [x] Commit `docs: sittings`.
 
 ## Test inventory (names, so the suite reads as the spec)
 

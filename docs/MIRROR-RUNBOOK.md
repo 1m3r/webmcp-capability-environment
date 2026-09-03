@@ -233,3 +233,22 @@ It is a demonstration played to a beat sheet. The measurement is `MIRROR-1`.
   `landed`, so the round deadlocked. `controls.test.js` now asserts that every
   rendered control is a legal move, in both modes. If you ever see a refusal
   caused by your own click, stop the run; that is a defect, not a finding.
+
+---
+
+## Addendum — 3 September 2026, after the sittings build
+
+The game changed shape on `feat/mirror-sittings` (see
+`docs/MIRROR-DESIGN-REVIEW.md` and `docs/superpowers/plans/2026-09-03-mirror-sittings.md`).
+What this runbook calls "rounds 1–4 without the dossier and 5–8 with it" no
+longer exists: the dossier opens at the **first close**, not at round four.
+
+The pre-registered measurement therefore moves to **sitting 1 versus sitting
+2**, same person, same agent, one variable — whether the human opened sitting 1.
+The familiarity confound is unchanged and must be stated exactly as before.
+Quiz decks are six rounds and pass at 4.
+
+For a run, open the page with `?instrument=on` so the log, the level and the
+version are on screen. Everything else in the protocol holds: two lines in the
+prompt, do not touch the page until the agent has arrived, confirm `5 tools`
+before speaking.

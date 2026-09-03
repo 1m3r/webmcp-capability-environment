@@ -5,9 +5,9 @@ defines a world, hands the agent a body inside it through WebMCP tool
 registration and nothing else, and the two of you play on one screen.
 
 You install nothing. The agent arrives knowing none of the rules and with no way
-to touch the game except the tools the page registers. As the team clears
-stages, the page hands it new method and new verbs — capability released by
-achievement, and released by your click.
+to touch the game except the tools the page registers. As you play, the page
+hands it new verbs and new knowledge — capability released by achievement, and
+released by your click.
 
 The first game is **Mirror**.
 
@@ -16,27 +16,59 @@ The first game is **Mirror**.
 > explains itself rather than pretending to be playable — there is no solo mode,
 > because needing a second player is the whole claim.
 
-## Mirror, in two modes
+## Mirror — the game where you find out how your agent sees you
 
-**Portrait.** Each round poses one question, and you answer it *about each
-other* — your agent reads you, you read your agent. *What colour is this person?
-Which Greek god? What are they afraid of?* Nothing has a right answer; you judge
-whether your agent's read of you landed. If you would rather only be read than
-do the reading, one checkbox sits you out and your agent answers alone.
+Mirror is played in **sittings**. A sitting is one deck of five questions.
+Your agent answers first, every round; you respond; and when the deck is done
+you **close the sitting** and decide what your agent carries out of it. The
+sittings accumulate into a **portrait**, and the portrait is what your agent
+reads before it answers next time. A sitting ends. The portrait does not.
 
-**Quiz.** Real questions with real answers, and each round one of you knows
-while the other guesses. *What is their favourite meal? Their favourite
-programming language?* Match 5 of 8 to pass. This is the mode the measurement
-runs in, because a match here is the guesser reaching an answer the other person
-actually holds.
+Three games share the engine and are chosen separately:
 
-Both of you answer independently and in the dark, and the reveal sets the two
-answers side by side.
+**Perspective.** Your agent reads you — *What colour is this person? What
+animal? What would they save from a fire?* — and commits each read with its
+reasons and four images, in one call. The page loads every image before it
+accepts the read, so a broken link is refused rather than discovered later.
+You see the read at the centre of its four pictures and respond: **That's me**,
+or **Not quite** with a one-line correction in your own words. The correction
+is your real move. It costs you a true thing about yourself, and it is the only
+currency that sharpens the perspective. Best with the agent you use every day.
+
+**Both ways.** You each read the other, in the dark, and the reveal sets the
+two reads side by side. Landed or missed is your call.
+
+**Quiz.** Real questions with real answers, one of you knows and the other
+guesses. Works with an agent that knows nothing about you yet. Match 4 of 6 to
+pass.
+
+### The close
+
+Every sitting ends on one decision, and it is the most consequential in the
+game:
+
+| | what your agent carries into the next sitting |
+|---|---|
+| **Open it** | every read, your responses, your corrections |
+| **Open the kept reads only** | the reads you said were you, and nothing else |
+| **Seal it** | nothing — it counts toward your level, but your agent reads you cold again |
+
+Your agent has seen none of your responses until this moment. Nothing from the
+sitting in play ever reaches it; that is not a rule it is asked to keep, it is
+the shape of the tool that hands it the dossier.
+
+### Levels
+
+Level is the number of sittings you have closed, plus one. Decks unlock by
+level. So does your agent's body: when you close your first sitting,
+`get_dossier` registers and the status bar ticks **5 tools → 6 tools** while
+you watch. Its body grew because you clicked.
 
 ## Your agent keeps playing on its own
 
 After it commits, it calls `wait_for_game_update` and the page tells it the
-moment you move. You never have to type "done" or "keep going".
+moment you move — including between sittings, while you choose the next deck.
+You never have to type "done" or "keep going".
 
 That tool is **the one thing in this codebase that touches no state** — no log
 entry, no version bump. Every other read logs through the reducer, and every
@@ -46,63 +78,37 @@ are tested: moved, timed out, reset, disposed.
 
 ## Secrecy is a matter of order, not of rendering
 
-A browser-driving agent reads the DOM. Anything on screen is available to it —
-that is recorded in `FROZEN.md` as a trap already paid for, and it disqualified
-an earlier session from the claim it was built to support.
-
+A browser-driving agent reads the DOM. Anything on screen is available to it.
 So "hidden until the reveal" is not a property of where the answer is drawn.
 
 **The agent answers first, every round.** It commits through a tool that locks
-the answer, with no verb to edit or retract it. At that moment your answer does
-not exist yet, so there is nothing to look at. The page then refuses to let you
-type until it has committed — a UI gate, and a testable one.
+the answer, with no verb to edit or retract it. In Both ways and Quiz your
+answer does not exist at that moment, so there is nothing to look at, and the
+page refuses to let you type until it has committed — a UI gate, and a testable
+one.
 
-The secret is protected by *when* things happen. It survives a perfect observer.
-
-## Two moments the page spends everything on
-
-**The reveal.** Both cards lift and cross-fade from a status word to the answer,
-the agent's 80ms before yours, because that is the order everything else in this
-game follows. Cyan means committed and retires the instant the answer is
-readable; amber means revealed and appears nowhere else. By round three you know
-what the colours mean without having been told, which is the page teaching
-itself with no text.
-
-**The transmission.** At round four you can open the dossier to your agent. You
-click, `syncTools()` re-registers, and its body grows from five verbs to six
-mid-session — the status bar ticks `5 tools` → `6 tools` while you watch. It is
-keyed on the grant rather than on the round, so it happens whenever you decide
-to, and it spends neither accent: no colour is available to mean a third thing.
-
-## The gallery, and the one thing the page cannot do
-
-In Portrait your agent also gets `illustrate_answer`, and this is the only verb
-in the game that runs the other way.
-
-Every other tool is the page lending the agent a way to act inside a world the
-page owns. This one is the page admitting a limit: it is static, offline,
-dependency-free and holds no API key, so it **cannot fetch an image**. It
-defines the slot and leaves the agent to fill it — with subagents, with search,
-with whatever its harness gives it. The page never asks how.
-
-Once a round is revealed, four images can be attached to each answer. At the end
-every answer is shown at the exact centre of its own four, so a miss stops being
-a line of text and becomes two different worlds for the same question.
-
-It cannot happen early: the agent does not know your answer until you reveal it,
-so the constraint is structural rather than imposed, and the page refuses
-attachment before the reveal regardless. And an agent that cannot fetch images
-simply never calls it — the results screen then renders exactly as it always
-did, with no empty frames.
+In Perspective there is no second answer to protect, and the ordering is not
+what keeps the game honest. What keeps it honest is that **the agent gets no
+feedback until you close the sitting**: `get_dossier` reads granted history and
+never the sitting in play. Both properties are asserted in Node by substring
+search over the rendered output and the dossier text.
 
 ## What only you can do
 
-There is no tool to reveal a round, judge a match, advance to the next round,
-open the dossier, answer on your behalf, or restart the game. Those exist as
-controls in the page and nowhere else.
+There is no tool to reveal a round, respond to one, move to the next round,
+open a sitting, close one, decide what the agent keeps, or start over. Those
+exist as controls in the page and nowhere else.
 
-**Authority is the absence of a tool.** The agent can answer, speak and read. It
-cannot decide, and it cannot end a round it has committed to.
+**Authority is the absence of a tool.** The agent can answer, speak and read.
+It cannot decide, and it cannot end a round it has committed to.
+
+## The instruments
+
+The shared log, the level and the document version are the experiment's
+instruments, not the player's game. They are off by default and come back with
+`?instrument=on`, along with the only control that can delete a portrait. The
+tool count stays on screen always, because it is the whole WebMCP claim in two
+words.
 
 ## Running it
 
@@ -114,16 +120,17 @@ Then <http://localhost:5179> in a browser with WebMCP — Chrome with
 `chrome://flags/#enable-webmcp-testing`, or ChatGPT desktop's built-in browser.
 Say: *"let's play this."*
 
-State lives in `localStorage` and never leaves your machine. The export is three
-files you download.
+State lives in `localStorage`, one portrait per game, and never leaves your
+machine. The export is three files you download.
 
 ```bash
 node --test 'playertwo/tests/*.test.js'
 ```
 
-165 tests, no dependencies. `journey.test.js` drives a stub agent through all
-eight rounds headlessly — including a self-driving agent that waits for its
-teammate between rounds — so the game is proven to close before any live run.
+No dependencies. `journey.test.js` drives a stub agent through two sittings
+headlessly — its body growing at the first close, the dossier carrying what was
+opened and nothing from the sitting in play — so the game is proven to close
+before any live run.
 
 ## How it is built
 
@@ -133,21 +140,24 @@ so nothing about the result is attributable to a toolchain.
     src/webmcp.js            detection, registration, re-registration on unlock
     src/registry.js          games register themselves here
     src/exporter.js          state, portrait, and the actor-tagged journey
+    src/waiters.js           the wait registry behind wait_for_game_update
     src/ui/shell.js          the only module that touches the DOM
     src/games/mirror/
-      game.js                the round state machine and the event log
-      questions.js           the bank and the recorded seed order
-      dossier.js             the portrait assembled from revealed rounds
+      game.js                the reducer: rounds, sittings, the close, the level
+      questions.js           the decks, per game, unlocked by level
+      dossier.js             what the agent may read: granted history only
       manual.js              what each tier hands the agent
-      tools.js               the tool surface, built per tier
+      tools.js               the tool surface, per game and tier
       render.js              state -> HTML, and state -> portrait markdown
       landing.js             what a visitor with no agent sees instead
 
 **Everything that carries a promise is pure.** The reducer, the agent
 projection, the renderer and the dossier are all DOM-free functions, which is
-what lets `secrecy.test.js` assert the game's central claim in Node by substring
-search over the rendered output. If `render.js` ever reaches for `document`,
-that promise stops being testable.
+what lets `secrecy.test.js` and `dossier.test.js` assert the game's central
+claims in Node by substring search. The one thing the page does that Node
+cannot — loading an image to see whether it paints — is injected into the tool
+surface by the shell, so the tests run with a stub and the page runs with a
+real `Image`.
 
 **Every mutation goes through the reducer.** A tool call and a click land in the
 same place, so the page and a Node test take an identical path through the state
@@ -156,7 +166,6 @@ machine, and neither can bypass the other.
 **Refusals reach the log.** A refusal that is only returned is invisible in the
 run record, and the run record is the evidence.
 
-Design decisions and the committed tone: `design-system/MASTER.md`.
-Specs and the build plan: `docs/superpowers/`. Run protocol:
-`docs/MIRROR-RUNBOOK.md`. What the numbers may be used for:
-`docs/MIRROR-PREREGISTRATION.md`.
+Design decisions and the committed tone: `design-system/MASTER.md`. The
+design review that produced the sittings: `docs/MIRROR-DESIGN-REVIEW.md`. Specs
+and the build plans: `docs/superpowers/`. Run protocol: `docs/MIRROR-RUNBOOK.md`.

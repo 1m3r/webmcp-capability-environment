@@ -4,14 +4,19 @@
     {
       "name": "keel",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["keel/server.mjs"],
+      "runtimeArgs": [
+        "keel/server.mjs"
+      ],
       "port": 5178
     },
     {
       "name": "mirror",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["playertwo/server.mjs"],
-      "port": 5179
+      "runtimeArgs": [
+        "playertwo/server.mjs"
+      ],
+      "port": 5179,
+      "autoPort": true
     }
   ]
 }

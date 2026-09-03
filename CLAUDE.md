@@ -99,3 +99,9 @@ and starts as new applications rather than as more levels of this one.
   task, so a rejected layout is never painted. Panel controls are not tools;
   `request_rule_change` only queues. Export carries the standard as shipped and
   as amended, and the scorer reports both vectors.
+- 2026-09-03 · Fable design review of Player Two + Mirror filed
+  (`docs/MIRROR-DESIGN-REVIEW.md`). Verdict FIX: the unit of play was wrong,
+  not the round. Built the same evening on `feat/mirror-sittings`: sittings,
+  the persistent portrait, the close with three grants, images at commit
+  verified at the tool boundary, three games chosen separately, instrument
+  layer. 179 tests. `feat/player-two` untouched for the submission.
