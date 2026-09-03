@@ -16,12 +16,12 @@
    the game, and nothing here animates that the game does not already animate. */
 
 import { escapeHtml } from './render.js';
-import { TOOL_NAMES_BY_TIER } from './game.js';
+import { CORE_TOOLS } from './game.js';
 
 const HUMAN_ONLY = ['reveal a round', 'judge a match', 'move to the next round', 'open the dossier'];
 
 export function renderLanding({ repoUrl = '', videoUrl = '' } = {}) {
-  const tools = TOOL_NAMES_BY_TIER[1]
+  const tools = CORE_TOOLS
     .map((name) => `<li><code>${escapeHtml(name)}</code></li>`)
     .join('\n        ');
 
@@ -50,8 +50,9 @@ export function renderLanding({ repoUrl = '', videoUrl = '' } = {}) {
         <ul class="landing__tools">
         ${tools}
         </ul>
-        <p class="landing__note">Five verbs at the start. A sixth is added
-          mid-game, when you decide to add it.</p>
+        <p class="landing__note">Five verbs in every game. Portrait adds a sixth
+          for the gallery, and a seventh arrives mid-game when you decide to add
+          it.</p>
       </div>
 
       <div class="landing__col">

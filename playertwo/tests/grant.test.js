@@ -9,7 +9,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  createDoc, reduce, canGrant, justGranted, DOSSIER_ROUND, TOOL_NAMES_BY_TIER
+  createDoc, reduce, canGrant, justGranted, DOSSIER_ROUND, toolNamesFor
 } from '../src/games/mirror/game.js';
 import { renderGame, renderGrant, renderGranted } from '../src/games/mirror/render.js';
 import { buildTools } from '../src/games/mirror/tools.js';
@@ -90,12 +90,13 @@ test('the transmission names the verb that was actually added', () => {
   doc = reduce(doc, { type: 'grant_tier' }).doc;
   const html = renderGranted(doc);
 
-  const added = TOOL_NAMES_BY_TIER[2].filter((n) => !TOOL_NAMES_BY_TIER[1].includes(n));
+  const before = toolNamesFor(doc.mode, 1);
+  const added = toolNamesFor(doc.mode, 2).filter((n) => !before.includes(n));
   assert.deepEqual(added, ['get_dossier']);
   assert.match(html, /get_dossier/);
-  assert.match(html, /5 tools/);
-  assert.match(html, /6 tools/);
-  for (const name of TOOL_NAMES_BY_TIER[2]) {
+  assert.match(html, new RegExp(`${before.length} tools`));
+  assert.match(html, new RegExp(`${toolNamesFor(doc.mode, 2).length} tools`));
+  for (const name of toolNamesFor(doc.mode, 2)) {
     assert.ok(html.includes(name), `the body should show ${name}`);
   }
 });
@@ -108,7 +109,7 @@ test('the count the transmission claims is the count that gets registered', () =
     if (tier === 2) doc = reduce(doc, { type: 'grant_tier' }).doc;
     const ctx = { getDoc: () => doc, setDoc: () => {}, now: () => 0 };
     const names = buildTools(ctx).map((t) => t.name);
-    assert.deepEqual(names, TOOL_NAMES_BY_TIER[tier],
+    assert.deepEqual(names, toolNamesFor(doc.mode, tier),
       `tier ${tier}: the transmission would name a body the page does not build`);
   }
 });

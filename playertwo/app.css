@@ -593,3 +593,103 @@ body[data-landing="true"] .panel { display: none; }
   .landing__cols { grid-template-columns: 1fr; }
   .landing__title { font-size: var(--step-2); }
 }
+
+/* ---- the answer gallery ------------------------------------------------ */
+
+/* One answer at the exact centre of its own four images.
+
+   The page cannot fetch these — it is static, offline and holds no key. The
+   agent finds them and hands them over through illustrate_answer, which is the
+   only place in this game where capability flows from the agent to the page
+   rather than the other way.
+
+   Spends neither accent. Cyan means committed, amber means revealed; a
+   photograph means neither, and the verdict mark keeps the only accent here. */
+
+.composition { margin: 0 0 var(--space-4); }
+
+.composition__label {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+  margin: 0 0 var(--space-2);
+}
+
+.composition__frame {
+  position: relative;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: var(--ground-raised);
+}
+
+/* A 2x2 with a hairline seam. The answer lands on the crossing point. */
+.composition__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  aspect-ratio: 1;
+}
+.composition__grid img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Four images of four different shapes still have to read as one block, and
+     a cell whose image never loads stays a dark square rather than a broken
+     icon — the page has no control over what the agent found. */
+  background: var(--ground-raised);
+}
+
+/* The scrim. A pool of ground colour in the middle so display type survives
+   photography nobody has seen, without putting a box around the words. */
+.composition__frame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 66% 52% at 50% 50%,
+    oklch(0.19 0.045 275 / 0.96) 0%,
+    oklch(0.19 0.045 275 / 0.88) 32%,
+    oklch(0.19 0.045 275 / 0.62) 56%,
+    oklch(0.19 0.045 275 / 0) 82%
+  );
+}
+
+.composition__answer {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: var(--space-4);
+  z-index: 1;
+  text-align: center;
+}
+.composition__answer span {
+  font-family: var(--font-display);
+  font-size: var(--step-2);
+  line-height: 1.1;
+  color: var(--ink);
+  max-width: 16ch;
+  text-wrap: balance;
+  /* The scrim does the work; this is insurance for the one image in sixteen
+     that comes back a bright sky exactly where the words land. */
+  text-shadow: 0 1px 18px oklch(0.19 0.045 275 / 0.95);
+}
+
+.composition__credits {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+  margin: var(--space-2) 0 0;
+  line-height: 1.4;
+}
+
+/* An illustrated round is a gallery entry rather than a table row, so it gets
+   the width back that the text layout did not need. */
+.results__round[data-illustrated="true"] { padding: var(--space-4) 0; }
+
+@media (max-width: 60rem) {
+  .composition__answer span { font-size: var(--step-1); }
+}

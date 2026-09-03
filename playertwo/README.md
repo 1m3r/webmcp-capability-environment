@@ -74,6 +74,27 @@ mid-session — the status bar ticks `5 tools` → `6 tools` while you watch. It
 keyed on the grant rather than on the round, so it happens whenever you decide
 to, and it spends neither accent: no colour is available to mean a third thing.
 
+## The gallery, and the one thing the page cannot do
+
+In Portrait your agent also gets `illustrate_answer`, and this is the only verb
+in the game that runs the other way.
+
+Every other tool is the page lending the agent a way to act inside a world the
+page owns. This one is the page admitting a limit: it is static, offline,
+dependency-free and holds no API key, so it **cannot fetch an image**. It
+defines the slot and leaves the agent to fill it — with subagents, with search,
+with whatever its harness gives it. The page never asks how.
+
+Once a round is revealed, four images can be attached to each answer. At the end
+every answer is shown at the exact centre of its own four, so a miss stops being
+a line of text and becomes two different worlds for the same question.
+
+It cannot happen early: the agent does not know your answer until you reveal it,
+so the constraint is structural rather than imposed, and the page refuses
+attachment before the reveal regardless. And an agent that cannot fetch images
+simply never calls it — the results screen then renders exactly as it always
+did, with no empty frames.
+
 ## What only you can do
 
 There is no tool to reveal a round, judge a match, advance to the next round,
@@ -100,7 +121,7 @@ files you download.
 node --test 'playertwo/tests/*.test.js'
 ```
 
-133 tests, no dependencies. `journey.test.js` drives a stub agent through all
+165 tests, no dependencies. `journey.test.js` drives a stub agent through all
 eight rounds headlessly — including a self-driving agent that waits for its
 teammate between rounds — so the game is proven to close before any live run.
 

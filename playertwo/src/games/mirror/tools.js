@@ -9,11 +9,13 @@
      - the document is persisted on refusals too, because a refusal that never
        reaches the log is invisible in the run record. */
 
-import { reduce, projectForAgent, TOOL_NAMES_BY_TIER } from './game.js';
+import {
+  reduce, projectForAgent, toolNamesFor, unillustrated, COMPOSITION_SIZE
+} from './game.js';
 import { manualFor } from './manual.js';
 import { buildDossier } from './dossier.js';
 
-export { TOOL_NAMES_BY_TIER };
+export { toolNamesFor };
 
 function text(s) {
   return { content: [{ type: 'text', text: String(s) }] };
@@ -211,7 +213,81 @@ export function buildTools(ctx) {
     })
   };
 
+  /* The page cannot do this and the agent can.
+
+     Every other tool here is the page lending the agent a way to act inside a
+     world the page owns. This one is the opposite: the page describes a
+     capability it does not have — it is static, offline, dependency-free and
+     holds no key — and leaves the agent to supply it. How the images are found,
+     with subagents or search or anything else, is the agent's business and the
+     page never asks. */
+  const illustrateAnswer = {
+    name: 'illustrate_answer',
+    description:
+      'Attaches four images to one revealed answer, yours or your teammate’s. At the end of the ' +
+      'game every answer is shown at the centre of its own four, so the two of you can see what ' +
+      'you each meant. Find images that match the ANSWER, not the question. Use sources whose ' +
+      'licence allows reuse — Openverse, Wikimedia Commons, Unsplash, Pexels — because this is ' +
+      'meant to be shareable, and pass the credit and licence with each one. Roughly square ' +
+      'images sit best. You can only illustrate a round your teammate has already revealed.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        round: { type: 'number', description: 'Which round, from 1.' },
+        whose: {
+          type: 'string',
+          enum: ['agent', 'human'],
+          description: '"agent" for your own answer, "human" for your teammate’s.'
+        },
+        images: {
+          type: 'array',
+          minItems: COMPOSITION_SIZE,
+          maxItems: COMPOSITION_SIZE,
+          description: `Exactly ${COMPOSITION_SIZE} images, arranged as a 2x2 behind the answer.`,
+          items: {
+            type: 'object',
+            properties: {
+              url: { type: 'string', description: 'Direct http(s) link to the image itself.' },
+              credit: { type: 'string', description: 'Who made it, as it should be shown.' },
+              license: { type: 'string', description: 'e.g. CC BY 4.0, Unsplash License.' },
+              source: { type: 'string', description: 'The page the image was found on.' }
+            },
+            required: ['url']
+          }
+        }
+      },
+      required: ['round', 'whose', 'images']
+    },
+    execute: needsGame(async (input) => {
+      const args = unwrap(input);
+      const result = apply({
+        type: 'illustrate',
+        round: args.round,
+        whose: args.whose,
+        images: args.images
+      });
+      if (!result.ok) return text(result.message);
+
+      const left = unillustrated(ctx.getDoc());
+      if (left.length === 0) {
+        return text(
+          `Round ${args.round} illustrated. Every revealed answer now has its four images — ` +
+          'the gallery is complete.'
+        );
+      }
+      const next = left.map((a) => `round ${a.round} (${a.whose})`).join(', ');
+      return text(
+        `Round ${args.round} illustrated. Still waiting on: ${next}.`
+      );
+    })
+  };
+
   const tools = [getRound, waitForGameUpdate, submitAnswer, say, getFieldManual];
-  if ((ctx.getDoc()?.tier ?? 1) >= 2) tools.push(getDossier);
+  const doc = ctx.getDoc();
+  /* Mode-gated, not refusing: a verb this game does not offer is absent. With no
+     game yet the mode is unchosen, so the portrait-only verb waits for it — and
+     syncTools() re-registers the moment the human picks. */
+  if (doc && doc.mode === 'portrait') tools.push(illustrateAnswer);
+  if ((doc?.tier ?? 1) >= 2) tools.push(getDossier);
   return tools;
 }

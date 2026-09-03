@@ -12,12 +12,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { renderLanding } from '../src/games/mirror/landing.js';
-import { TOOL_NAMES_BY_TIER } from '../src/games/mirror/game.js';
+import { CORE_TOOLS } from '../src/games/mirror/game.js';
 import { createDoc, reduce } from '../src/games/mirror/game.js';
 
 test('it names every tier-1 tool the page would actually register', () => {
   const html = renderLanding();
-  for (const name of TOOL_NAMES_BY_TIER[1]) {
+  for (const name of CORE_TOOLS) {
     assert.ok(html.includes(name), `the landing screen should name ${name}`);
   }
   assert.ok(!html.includes('get_dossier'),

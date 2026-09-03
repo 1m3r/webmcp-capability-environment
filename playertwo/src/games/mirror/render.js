@@ -6,7 +6,8 @@
 
 import {
   isExcused, readyToReveal, isComplete, lastRefusal, atGrantMoment, justGranted, DOSSIER_ROUND,
-  VERDICTS, VERDICT_LABELS, goodVerdict, TOOL_NAMES_BY_TIER
+  imagesFor,
+  VERDICTS, VERDICT_LABELS, goodVerdict, toolNamesFor
 } from './game.js';
 import { QUIZ_PASS } from './questions.js';
 
@@ -106,6 +107,17 @@ export function renderRound(doc) {
   </section>`;
 }
 
+/* The keepsake has to survive outside the page, so the composition travels as
+   links with their attribution attached rather than as four bare URLs. */
+function pushImages(lines, images) {
+  if (!images || !images.length) return;
+  const parts = images.map((image, i) => {
+    const label = [image.credit, image.license].filter(Boolean).join(', ') || `image ${i + 1}`;
+    return `[${label}](${image.url})`;
+  });
+  lines.push(`  - illustrated by: ${parts.join(' · ')}`);
+}
+
 export function renderPortrait(doc) {
   const lines = ['# Mirror — a portrait in two columns', ''];
   const done = doc.rounds.filter((r) => r.state === 'judged' || r.state === 'revealed');
@@ -118,7 +130,11 @@ export function renderPortrait(doc) {
     lines.push(`## ${i + 1}. ${round.question}`);
     lines.push('');
     lines.push(`- **${agentLabel}** — ${round.agentAnswer}`);
-    if (round.humanAnswer !== null) lines.push(`- **${humanLabel}** — ${round.humanAnswer}`);
+    pushImages(lines, imagesFor(round, 'agent'));
+    if (round.humanAnswer !== null) {
+      lines.push(`- **${humanLabel}** — ${round.humanAnswer}`);
+      pushImages(lines, imagesFor(round, 'human'));
+    }
     if (round.verdict) lines.push(`- verdict: **${round.verdict}**`);
     lines.push('');
   }
@@ -152,6 +168,56 @@ export function renderStart() {
   </section>`;
 }
 
+/* One answer at the centre of its own four images.
+
+   The answer sits on the intersection where all four meet — not above the grid
+   and not beside it — which is the whole visual idea: the words are the axis the
+   pictures turn around. A radial scrim darkens the middle so the type survives
+   photography the page has never seen.
+
+   alt is empty by design. These images illustrate an answer that is already in
+   the DOM as text directly beneath them, and a credit is not a description — so
+   captioning them with the photographer's name would tell a screen reader less
+   than the silence does. */
+function composition(label, answer, images) {
+  const cells = images.map((image) => `<img src="${escapeHtml(image.url)}" alt=""
+          loading="lazy" decoding="async" referrerpolicy="no-referrer">`).join('\n        ');
+
+  /* Deduplicated. Four images from one source produced the same credit four
+     times, and a caption that repeats itself reads as a bug rather than as
+     attribution. Attribution still has to be visible — that is the whole reason
+     the manual asks for licensed sources — so it is shortened, not dropped. */
+  const credits = [...new Set(images
+    .map((image) => [image.credit, image.license].filter(Boolean).join(' · '))
+    .filter(Boolean))];
+
+  return `<figure class="composition">
+      <figcaption class="composition__label">${escapeHtml(label)}</figcaption>
+      <div class="composition__frame">
+        <div class="composition__grid">
+        ${cells}
+        </div>
+        <p class="composition__answer"><span>${escapeHtml(answer)}</span></p>
+      </div>
+      ${credits.length
+        ? `<p class="composition__credits">${escapeHtml(credits.join(' — '))}</p>`
+        : ''}
+    </figure>`;
+}
+
+/* An answer renders as a composition when it has images and as a line of text
+   when it does not, and the two sit in the same list without argument.
+
+   That fallback is the feature's most important property. An agent with no way
+   to fetch images makes no illustrate_answer calls, and this screen renders
+   exactly as it did before the gallery existed — no empty frames, nothing
+   missing, nothing broken. */
+function resultAnswer(label, answer, images) {
+  if (answer === null) return '';
+  if (images && images.length) return composition(label, answer, images);
+  return `<p class="results__answer"><span>${escapeHtml(label)}</span>${escapeHtml(answer)}</p>`;
+}
+
 export function renderResults(doc) {
   const judged = doc.rounds.filter((r) => r.state === 'judged');
   const good = goodVerdict(doc.mode);
@@ -167,13 +233,13 @@ export function renderResults(doc) {
     if (round.state !== 'judged') return '';
     const agentLabel = labelFor('agent', round.agentTarget, doc.mode);
     const humanLabel = labelFor('human', round.humanTarget, doc.mode);
-    const human = round.humanAnswer === null
-      ? ''
-      : `<p class="results__answer"><span>${escapeHtml(humanLabel)}</span>${escapeHtml(round.humanAnswer)}</p>`;
-    return `<article class="results__round" data-verdict="${round.verdict}">
+    const agentImages = imagesFor(round, 'agent');
+    const humanImages = imagesFor(round, 'human');
+    const illustrated = Boolean(agentImages || humanImages);
+    return `<article class="results__round" data-verdict="${round.verdict}" data-illustrated="${illustrated}">
       <h3>${i + 1}. ${escapeHtml(round.question)}</h3>
-      <p class="results__answer"><span>${escapeHtml(agentLabel)}</span>${escapeHtml(round.agentAnswer)}</p>
-      ${human}
+      ${resultAnswer(agentLabel, round.agentAnswer, agentImages)}
+      ${resultAnswer(humanLabel, round.humanAnswer, humanImages)}
       <p class="results__mark">${round.verdict}</p>
     </article>`;
   }).join('\n');
@@ -216,8 +282,8 @@ export function renderGrant(doc) {
    moment is carried by the ground lifting, the verb resolving in mono at
    display scale, and the status bar's tool count ticking 5 -> 6 on its own. */
 export function renderGranted(doc) {
-  const before = TOOL_NAMES_BY_TIER[1];
-  const after = TOOL_NAMES_BY_TIER[2];
+  const before = toolNamesFor(doc.mode, 1);
+  const after = toolNamesFor(doc.mode, 2);
   const added = after.filter((n) => !before.includes(n));
 
   const tools = after.map((name) => {
