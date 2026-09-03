@@ -27,7 +27,30 @@ export function labelFor(who, target, mode) {
   return `${base} — ${knows ? 'the truth' : 'guessing'}`;
 }
 
-function answerCard(who, label, state, answer, revealed) {
+/* What a card says while it has no answer yet.
+
+   MASTER.md sets this module's hardest job: "the interface's whole job is to make
+   waiting feel like something rather than nothing, and then to make the reveal
+   land." Both cards used to say the word `waiting` in 13px mono, which is the
+   definition of nothing.
+
+   The two waits are not the same wait and should not read alike. The agent's is
+   the signal coming in — the page is genuinely listening and nobody knows how
+   long it will take. The human's, before the agent commits, is a turn that has
+   not arrived; after it commits, it is a turn that has. */
+function waitingBody(who, agentHasAnswered) {
+  if (who === 'agent') {
+    return `<p class="status status--listening">
+        <span class="signal" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="status__word">listening</span>
+      </p>`;
+  }
+  return agentHasAnswered
+    ? '<p class="status status--your-turn">your turn</p>'
+    : '<p class="status status--held">held until your agent answers</p>';
+}
+
+function answerCard(who, label, state, answer, revealed, agentHasAnswered) {
   /* `revealed && answer === null` is reachable: an excused round reveals with no
      human answer, and String(null) is the word "null" set in display type and
      amber. It shipped that way and only became visible once the page started
@@ -35,13 +58,14 @@ function answerCard(who, label, state, answer, revealed) {
   const body = revealed && answer !== null
     ? `<p class="answer">${escapeHtml(answer)}</p>`
     : answer !== null
-      ? '<p class="status committed">committed</p>'
-      : '<p class="status waiting">waiting</p>';
+      ? '<p class="status status--committed">committed</p>'
+      : waitingBody(who, agentHasAnswered);
   /* Cyan retires at the reveal. It means `committed`, and once the answer is
      readable that is no longer news — leaving the halo on would put the card in
      two states at once and make the loudest thing on screen compete with the
      amber it is supposed to be handing over to. */
-  return `<article class="card card--${who}" data-committed="${answer !== null && !revealed}">
+  return `<article class="card card--${who}" data-committed="${answer !== null && !revealed}"
+      data-waiting="${answer === null && !revealed}">
       <h3>${escapeHtml(label)}</h3>
       ${body}
     </article>`;
@@ -63,12 +87,38 @@ function refusalPanel(doc) {
     </p>`;
 }
 
+/* Eight rounds, as a journey rather than a number.
+
+   "Round 4 of 8" was eleven pixels of mono in a corner, which tells you where you
+   are only if you go looking. This shows the shape of the whole game at a glance:
+   what is behind you and how it went, where you are, and how much is left.
+
+   Verdicts colour it, so amber accumulates across a good game — the accent is
+   already spent on `revealed`, and a mark for a revealed-and-judged round is the
+   same meaning, not a second one. A watched game has no verdicts, so its marks
+   read as done rather than as good. */
+function progress(doc) {
+  const marks = doc.rounds.map((round, i) => {
+    const done = round.state === 'judged';
+    const current = i === doc.roundIndex;
+    const good = round.verdict !== null && round.verdict === goodVerdict(doc.mode);
+    const state = done ? (round.verdict === null ? 'read' : good ? 'good' : 'miss')
+      : current ? 'current'
+      : 'ahead';
+    return `<li class="progress__mark" data-state="${state}"><span>${i + 1}</span></li>`;
+  }).join('');
+
+  return `<ol class="progress" aria-label="Round ${doc.roundIndex + 1} of ${doc.rounds.length}">${
+    marks}</ol>`;
+}
+
 export function renderRound(doc) {
   const round = doc.rounds[doc.roundIndex];
   const revealed = round.state === 'revealed' || round.state === 'judged';
   const agentLabel = labelFor('agent', round.agentTarget, doc.mode);
   const humanLabel = labelFor('human', round.humanTarget, doc.mode);
   const canAnswer = round.state === 'agent_committed' && !isExcused(doc);
+  const agentHasAnswered = round.agentAnswer !== null;
 
   const watching = isWatching(doc);
   const controls = [];
@@ -95,6 +145,7 @@ export function renderRound(doc) {
 
   return `<section class="round" data-state="${round.state}">
     <header class="round__head">
+      ${progress(doc)}
       <p class="round__count">Round ${doc.roundIndex + 1} of ${doc.rounds.length}</p>
       <h2 class="round__question">${escapeHtml(round.question)}</h2>
       <p class="round__subject">${escapeHtml(agentLabel.toLowerCase())}</p>
@@ -103,8 +154,8 @@ export function renderRound(doc) {
     ${refusalPanel(doc)}
 
     <div class="round__cards" data-single="${watching}">
-      ${answerCard('agent', agentLabel, round.state, round.agentAnswer, revealed)}
-      ${watching ? '' : answerCard('human', humanLabel, round.state, round.humanAnswer, revealed)}
+      ${answerCard('agent', agentLabel, round.state, round.agentAnswer, revealed, agentHasAnswered)}
+      ${watching ? '' : answerCard('human', humanLabel, round.state, round.humanAnswer, revealed, agentHasAnswered)}
     </div>
 
     ${watching ? `<p class="round__excused">${
