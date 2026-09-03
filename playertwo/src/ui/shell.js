@@ -38,6 +38,12 @@ let grantWasOffered = false;
 const READING_BEAT_MS = 3200;
 let readingTimer = null;
 
+/* Which screen the stage is currently showing. The stage scrolls internally, so
+   a new screen inherits the last one's scroll offset — after the grant offer
+   scrolls to the bottom, the transmission that replaces it renders above the
+   fold and the moment happens off-screen. Reset when this changes. */
+let lastScreen = null;
+
 /* Filled in at deploy time. Empty strings simply drop the link. */
 const LINKS = {
   repoUrl: 'https://github.com/1m3r/webmcp-capability-environment',
@@ -137,6 +143,13 @@ function settleWatch() {
   }
 }
 
+/* The transmission is showing. One predicate, read by the renderer and by the
+   thing that must not interrupt it, so the two cannot disagree about whether a
+   moment is currently on screen. */
+function transmissionShowing() {
+  return Boolean(doc) && game.justGranted(doc) && transmissionSeen !== doc.version;
+}
+
 /* In watch mode the page turns its own rounds.
 
    With no second answer there is nothing to wait for, so Reveal and the verdict
@@ -145,10 +158,13 @@ function settleWatch() {
    holds for a beat, and the page advances — so the run paces itself at whatever
    speed the agent thinks.
 
-   Two deliberate stops. At the grant moment it does NOT advance: that is the one
-   decision left to the human in this mode, and hurrying past it would take away
-   the only authority they still hold. And it never advances past the last round,
-   because that is the results screen.
+   Three deliberate stops. At the grant moment it does NOT advance: that is the
+   one decision left to the human in this mode, and hurrying past it would take
+   away the only authority they still hold. It does not advance while the
+   transmission is on screen either — granting clears atGrantMoment, so without
+   this the page would schedule a round turn behind the moment it just earned and
+   dismiss it, unread, after one beat, leaving its Continue button decorative.
+   And it never advances past the last round, because that is the results screen.
 
    The agent gains nothing here. It still has no tool that reveals or advances;
    the page is doing it, which is the same hand that always did. */
@@ -160,6 +176,7 @@ function advanceIfWatching() {
   if (round.state !== 'judged') return;
   if (doc.roundIndex + 1 >= doc.rounds.length) return;
   if (game.atGrantMoment(doc)) return;
+  if (transmissionShowing()) return;
 
   readingTimer = setTimeout(() => dispatch({ type: 'next' }), READING_BEAT_MS);
 }
@@ -187,9 +204,18 @@ function render() {
     renderStatus();
     return;
   }
+  const screen = transmissionShowing() ? 'transmission'
+    : game.isComplete(doc) ? 'results'
+    : `round-${doc.roundIndex}`;
+
   stage.innerHTML = game.render(doc, { transmissionSeen });
   renderLog();
   renderStatus();
+
+  /* A new screen starts at its top. Only the grant offer overrides this, just
+     below, because it is an addition to a round already being read. */
+  if (screen !== lastScreen) stage.scrollTop = 0;
+  lastScreen = screen;
 
   advanceIfWatching();
 
@@ -255,6 +281,7 @@ el('restart').addEventListener('click', () => {
   doc = null;
   transmissionSeen = null;
   grantWasOffered = false;
+  lastScreen = null;
   clearTimeout(readingTimer);
   try { localStorage.removeItem(game.storageKey); } catch { /* nothing to clear */ }
   waits.notify(0);   // release any agent waiting on a version that will never come

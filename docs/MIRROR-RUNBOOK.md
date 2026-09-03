@@ -33,7 +33,14 @@ Do them in that order. Block 0 protects the other two.
    anything**. If it reads `no model context` you will get the landing screen
    instead of the game, and that is the page telling you the run cannot begin —
    there is no fallback channel.
-5. Be ready to answer honestly. A run where you answer strategically rather than
+5. **Decide whether you are playing or watching.** In Portrait, the checkbox
+   "I want to answer about my agent too" is the switch. Left on, it is a
+   two-sided game: you answer, you reveal, you judge each round landed or missed.
+   Turned off, it is a **watch** — your agent answers, the page reveals and turns
+   each round by itself after a beat, there are no verdicts, and the only button
+   you press all game is the one at round four that opens the dossier. A watch
+   is the better recording; a two-sided game is the better game.
+6. Be ready to answer honestly. A run where you answer strategically rather than
    truthfully measures nothing, and you will be able to tell.
 
 ---

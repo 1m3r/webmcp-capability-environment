@@ -287,18 +287,22 @@ export function renderResults(doc) {
    round 4's two answers or its verdict — the reveal you had just earned was
    replaced by an offer. Additive here; the moment comes after the click. */
 export function renderGrant(doc) {
+  const watching = isWatching(doc);
   return `<section class="grant">
-    <p class="grant__label">round ${DOSSIER_ROUND} is judged</p>
+    <p class="grant__label">${watching
+      ? `${DOSSIER_ROUND} rounds read`
+      : `round ${DOSSIER_ROUND} is judged`}</p>
     <h3 class="grant__title">Your agent has been reading you blind.</h3>
-    <p class="grant__body">You can open the dossier to it — every round so far,
-      both columns, with your verdicts. It is the only way it learns anything
-      about you that it did not guess. There is no tool it can call to take
-      this; the grant is yours alone.</p>
+    <p class="grant__body">You can open the dossier to it — ${watching
+      ? 'everything it has said about you so far, gathered in one place'
+      : 'every round so far, both columns, with your verdicts'}. It is the only
+      way it learns anything about you that it did not guess. There is no tool it
+      can call to take this; the grant is yours alone.</p>
     <div class="grant__controls">
       <button type="button" data-action="grant">Open the dossier</button>
     </div>
     <p class="grant__note">Or press Next round and keep it closed. That is a real
-      choice, and the game plays on either way.</p>
+      choice, and ${watching ? 'the reading goes on' : 'the game plays on'} either way.</p>
   </section>`;
 }
 
