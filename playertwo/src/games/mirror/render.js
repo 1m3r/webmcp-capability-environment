@@ -215,9 +215,31 @@ export function renderPortrait(doc) {
   return lines.join('\n');
 }
 
-export function renderStart() {
+/* The first screen a player with an agent actually sees.
+
+   It used to open on "Two ways to play" with no statement of what the game is
+   and, more usefully, no statement of whether the other player had arrived. The
+   runbook's own step 4 tells the operator to confirm an entry point and a tool
+   count before saying anything — that check lived only in 11px of mono in the
+   corner. It belongs here, at full size, on the screen where you decide to
+   begin. */
+export function renderStart({ entry = null, tools = 0 } = {}) {
+  const connected = Boolean(entry) && tools > 0;
+  const presence = connected
+    ? `<p class="start__presence" data-connected="true">
+        <span class="signal" aria-hidden="true"><i></i><i></i><i></i></span>
+        Your agent is here, with ${tools} ${tools === 1 ? 'tool' : 'tools'} on this page.
+        <span class="start__entry">${escapeHtml(entry)}</span>
+      </p>`
+    : `<p class="start__presence" data-connected="false">
+        No agent is reading this page. You can look around, but a round cannot
+        begin — your agent moves first, every time.
+      </p>`;
+
   return `<section class="start">
+    <p class="start__eyebrow">a game for you and your agent</p>
     <h2 class="start__title">Two ways to play</h2>
+    ${presence}
 
     <div class="start__modes">
       <button type="button" class="start__mode" data-mode="portrait">
@@ -328,7 +350,11 @@ export function renderResults(doc) {
       ${headline}
     </header>
     ${rows}
-    <p class="results__note">Press Export to keep this.</p>
+    <div class="results__keep">
+      <button type="button" data-action="export">Keep this</button>
+      <p class="results__note">Three files, downloaded to this machine. Nothing
+        here has ever left it.</p>
+    </div>
   </section>`;
 }
 
