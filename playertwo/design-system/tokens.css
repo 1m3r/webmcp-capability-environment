@@ -38,9 +38,18 @@
   --space-5: 3.25rem;
 
   /* ---- motion -------------------------------------------------------- */
-  --ease-signal: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Four curves, each with one job. One curve used everywhere is why a bold
+     layout still reads as templated — all the movement sounds the same. */
+  --ease-signal: cubic-bezier(0.22, 1, 0.36, 1);   /* the reveal: overshoot, settle */
+  --ease-enter:  cubic-bezier(0.16, 1, 0.30, 1);   /* arrivals: fast in, long tail */
+  --ease-press:  cubic-bezier(0.30, 0, 0.10, 1);   /* micro: tactile, no float */
+  --ease-breath: cubic-bezier(0.45, 0, 0.55, 1);   /* symmetric: the waiting pulse */
+
+  --dur-micro:  140ms;
+  --dur-quick:  180ms;
   --dur-reveal: 420ms;
-  --dur-quick: 180ms;
+  --dur-enter:  620ms;
+  --dur-breath: 2600ms;
 }
 
 /* Ships with the animation, not in a later pass. */

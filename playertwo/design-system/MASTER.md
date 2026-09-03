@@ -69,7 +69,14 @@ small sizes, where it would read as a bug.
 
 `transform` and `opacity` only. Never the default `ease-in-out`.
 
-    --ease-signal: cubic-bezier(0.22, 1, 0.36, 1)
+Four curves, each with one job. One curve used everywhere is why a bold layout
+still reads as templated — all the movement sounds the same, so none of it means
+anything.
+
+    --ease-signal: cubic-bezier(0.22, 1, 0.36, 1)   the reveal: overshoot, settle
+    --ease-enter:  cubic-bezier(0.16, 1, 0.30, 1)   arrivals: fast in, long tail
+    --ease-press:  cubic-bezier(0.30, 0, 0.10, 1)   micro: tactile, no float
+    --ease-breath: cubic-bezier(0.45, 0, 0.55, 1)   symmetric: the waiting pulse
 
 **One signature interaction: the reveal.** It is the only moment the page has.
 Both cards lift and their content cross-fades from the status word to the answer
@@ -79,6 +86,30 @@ follows.
 
 The `prefers-reduced-motion` reset ships in `tokens.css`, in the same file as
 the animation rather than in a later pass.
+
+## Waiting is a designed state, not the absence of one
+
+This tone's stated job is to make *waiting* feel like something and then make the
+reveal land. The second half shipped first; the first half was the word `waiting`
+in 13px mono on both cards, which is the definition of nothing.
+
+The two waits are not the same wait and must not read alike:
+
+| card | state | what it says |
+|---|---|---|
+| agent | composing | a three-bar meter breathing out of phase, `listening` |
+| you | before it commits | `held until your agent answers` |
+| you | after it commits | `your turn`, in full ink |
+
+**The meter is never cyan.** Cyan means committed, and a waiting card is the one
+thing that is not — it breathes in `--ink-dim` and hands over to the accent only
+when an answer actually lands.
+
+**Waiting escalates, because a stall is this game's real failure mode.** The page
+stamps how long the agent has been silent and the card says so: at 20s
+*still nothing*, at 60s *your agent has gone quiet*, in `--refusal`. A human who
+cannot tell thinking from stopped will sit and watch an identical card either
+way — which is exactly what happened in the first live run.
 
 ## What the design must never do
 

@@ -55,16 +55,59 @@ body {
   margin: 0;
 }
 
+/* ---- progress -------------------------------------------------------- */
+
+/* The shape of the whole game, at a glance. Amber accumulates across a good run;
+   no new hue is spent, because a judged-and-landed round means `revealed` and
+   that is what amber already means. */
+.progress {
+  display: flex;
+  gap: var(--space-1);
+  list-style: none;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+}
+.progress__mark {
+  flex: 1;
+  max-width: 3.5rem;
+  height: 0.25rem;
+  border-radius: 999px;
+  background: var(--rule);
+  position: relative;
+  transition: background-color var(--dur-quick) var(--ease-enter),
+              transform var(--dur-quick) var(--ease-enter);
+}
+.progress__mark span {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.progress__mark[data-state="good"]    { background: var(--reveal); }
+.progress__mark[data-state="miss"]    { background: var(--ink-dim); }
+.progress__mark[data-state="read"]    { background: var(--ink-dim); }
+.progress__mark[data-state="ahead"]   { background: var(--rule); }
+.progress__mark[data-state="current"] {
+  background: var(--ink);
+  transform: scaleY(2);
+}
+
 /* ---- the round ------------------------------------------------------- */
 
 .stage {
   padding: var(--space-5) var(--space-4);
   display: grid;
   justify-items: center;
-  align-content: start;
+  /* Centred when the round fits, top-aligned the moment it does not, so a short
+     round uses the height it has instead of hugging the top of a tall column and
+     leaving the bottom half empty. */
+  align-content: safe center;
   overflow-y: auto;
   min-height: 0;
 }
+/* The results and the landing screen are documents: they start at the top and
+   scroll, and centring them would bounce the reader. */
+.stage:has(.results), .stage:has(.landing) { align-content: start; }
 .round { width: min(100%, 48rem); }
 
 .round__count {
@@ -110,9 +153,12 @@ body {
 .card {
   border: 1px solid var(--rule);
   border-radius: 0.75rem;
-  padding: var(--space-3);
+  padding: var(--space-4) var(--space-3);
   background: var(--ground-raised);
-  min-height: 8rem;
+  min-height: 10rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   transition: box-shadow var(--dur-quick) var(--ease-signal),
               border-color var(--dur-quick) var(--ease-signal);
 }
@@ -132,9 +178,72 @@ body {
   border-color: var(--signal-dim);
   box-shadow: 0 0 0 1px var(--signal-dim), 0 0 2.5rem -0.75rem var(--signal);
 }
-.status { font-family: var(--font-mono); font-size: var(--step--1); margin: 0; }
-.status.waiting { color: var(--ink-dim); }
-.status.committed { color: var(--signal); }
+.status {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.status--committed { color: var(--signal); }
+.status--held, .status--your-turn, .status--listening { color: var(--ink-dim); }
+.status--your-turn { color: var(--ink); }
+
+/* THE WAITING STATE.
+
+   MASTER.md: "the interface's whole job is to make waiting feel like something
+   rather than nothing." It used to be the word `waiting`. This is three bars at
+   rest, breathing out of phase — a level meter with nothing coming in yet, which
+   is exactly what is true while the agent composes.
+
+   Deliberately NOT cyan. Cyan means committed, and a waiting card is the one
+   thing that is not. It breathes in --ink-dim and hands over to the accent only
+   when the answer actually lands. */
+.signal {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 0.85rem;
+}
+.signal i {
+  display: block;
+  width: 2px;
+  height: 100%;
+  background: var(--ink-dim);
+  transform-origin: bottom;
+  transform: scaleY(0.3);
+  animation: breathe var(--dur-breath) var(--ease-breath) infinite;
+}
+.signal i:nth-child(2) { animation-delay: -1700ms; }
+.signal i:nth-child(3) { animation-delay: -800ms; }
+
+@keyframes breathe {
+  0%, 100% { transform: scaleY(0.25); opacity: 0.5; }
+  50%      { transform: scaleY(1);    opacity: 1; }
+}
+
+/* The escalation. The shell stamps how long this round has been waiting, and the
+   card says so — a stall is the failure mode this game actually has, and a human
+   who cannot tell the difference between thinking and stalled will sit there. */
+.stage[data-wait="long"] .status--listening { color: var(--ink); }
+.stage[data-wait="long"] .status__word::after {
+  content: ' — still nothing';
+  color: var(--ink-dim);
+}
+.stage[data-wait="stalled"] .status--listening { color: var(--refusal); }
+.stage[data-wait="stalled"] .signal i { background: var(--refusal); }
+.stage[data-wait="stalled"] .status__word::after {
+  content: ' — your agent has gone quiet';
+  color: var(--refusal);
+}
+
+/* Reduced motion: the meter holds at rest instead of breathing. The global reset
+   in tokens.css already caps duration; this makes the resting shape deliberate
+   rather than whatever frame it froze on. */
+@media (prefers-reduced-motion: reduce) {
+  .signal i { animation: none; transform: scaleY(0.55); opacity: 0.8; }
+}
 
 /* REVEALED. The one place amber is allowed, and the page's only real moment. */
 .answer {
@@ -224,10 +333,25 @@ button {
   font-family: var(--font-mono);
   font-size: var(--step--1);
   cursor: pointer;
-  transition: transform var(--dur-quick) var(--ease-signal);
+  transition: transform var(--dur-micro) var(--ease-press),
+              border-color var(--dur-quick) var(--ease-press),
+              background-color var(--dur-quick) var(--ease-press);
+  /* A control you can actually hit with a thumb. */
+  min-height: 2.75rem;
 }
-button:not(:disabled):hover { transform: translateY(-1px); }
+/* Pointer styling lives behind the guard, because an unguarded hover rule sticks
+   after a tap on a touch device — the commonest mobile-afterthought tell. */
+@media (hover: hover) {
+  button:not(:disabled):hover { transform: translateY(-1px); border-color: var(--ink-dim); }
+  .landing__link:hover { color: var(--ink); }
+}
+/* The press tell. A control that answers the pointer but not the press reads as
+   broken however good the layout is, and there were none of these at all. */
+button:not(:disabled):active { transform: translateY(0) scale(0.985); }
+.landing__link:active { opacity: 0.7; }
+.start__mode:not(:disabled):active { transform: scale(0.99); }
 button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.round__form input:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
 .round__controls { display: flex; gap: var(--space-2); margin-top: var(--space-4); }
 
@@ -270,6 +394,32 @@ button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 }
 .log__actor { grid-area: actor; color: var(--ink-dim); }
 .log__entry--agent .log__actor { color: var(--signal); }
+
+/* SPEECH. say() is the agent addressing a person, and it was set identically to
+   a read — the one entry meant to be heard, rendered as machine traffic. It gets
+   the text face, full ink, and room; the mechanical record recedes behind it. */
+.log__entry[data-kind="speech"] {
+  grid-template-areas: "actor actor" "detail detail";
+  padding: var(--space-2) 0;
+}
+.log__entry[data-kind="speech"] .log__action { display: none; }
+.log__entry[data-kind="speech"] .log__detail {
+  font-family: var(--font-text);
+  font-size: var(--step-0);
+  color: var(--ink);
+  line-height: 1.4;
+  border-left: 2px solid var(--rule);
+  padding-left: var(--space-2);
+  margin-top: var(--space-1);
+}
+.log__entry[data-kind="event"] .log__detail { color: var(--ink-dim); }
+
+.log__empty {
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+  line-height: 1.5;
+  padding: var(--space-2) 0;
+}
 /* The verb was hidden, so the log said what was SAID and never what was DONE.
    With it, the shared log is the run record on screen: reads, commits and
    refusals read as different kinds of event. */
@@ -286,11 +436,34 @@ button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 @media (max-width: 60rem) {
   body { grid-template-columns: 1fr; height: auto; min-height: 100vh; overflow: visible; }
   .stage, .panel { overflow-y: visible; }
+  .stage { align-content: start; padding: var(--space-4) var(--space-3); }
   .round__cards { grid-template-columns: 1fr; gap: var(--space-3); }
   .card--agent, .card--human { transform: none; }
+  /* A card sized for a desktop column is mostly empty space on a phone. */
+  .card { min-height: 0; gap: var(--space-3); padding: var(--space-3); }
   .round__question { font-size: var(--step-2); }
   .panel { border-left: 0; border-top: 1px solid var(--rule); }
-  .round__form { flex-wrap: wrap; }
+
+  /* The status bar carries the WebMCP proof and must stay legible. Stacked, it
+     wrapped into the wordmark; it gets its own line and its own scroll. */
+  .bar { flex-wrap: wrap; gap: var(--space-1) var(--space-2); }
+  .bar__status { flex: 1 0 100%; }
+
+  /* The commit row: the label was taking the width, the input was clipped mid
+     placeholder, and the button had fallen onto its own line anyway. Stacked
+     deliberately instead of by accident, with a full-width target. */
+  .round__form {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+    align-items: stretch;
+  }
+  .round__form label { flex: none; }
+  .round__form input { width: 100%; }
+  .round__form button { width: 100%; }
+
+  .round__controls { flex-wrap: wrap; }
+  .round__controls button { flex: 1 1 auto; }
 }
 
 /* ---- start screen ---------------------------------------------------- */

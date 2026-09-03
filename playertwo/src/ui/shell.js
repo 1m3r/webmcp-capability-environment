@@ -44,6 +44,46 @@ let readingTimer = null;
    fold and the moment happens off-screen. Reset when this changes. */
 let lastScreen = null;
 
+/* How long the page has been waiting on the agent, in tiers the CSS reads.
+
+   This is the async surface the game actually has, and it had one state. The
+   agent may answer in two seconds or may have stopped playing altogether, and a
+   human who cannot tell the difference will sit and watch a card that looks
+   identical either way. Test 1 was exactly that failure.
+
+   Presentational only: a data attribute on the stage, no document mutation, so
+   nothing here reaches the reducer, the export or the run record. */
+const WAIT_LONG_MS = 20000;
+const WAIT_STALLED_MS = 60000;
+let waitingSince = null;
+let waitTimer = null;
+
+function stampWait() {
+  clearTimeout(waitTimer);
+  const elapsed = waitingSince === null ? 0 : Date.now() - waitingSince;
+  stage.dataset.wait = waitingSince === null ? 'none'
+    : elapsed >= WAIT_STALLED_MS ? 'stalled'
+    : elapsed >= WAIT_LONG_MS ? 'long'
+    : 'short';
+  if (waitingSince === null || elapsed >= WAIT_STALLED_MS) return;
+  const next = elapsed < WAIT_LONG_MS ? WAIT_LONG_MS - elapsed : WAIT_STALLED_MS - elapsed;
+  waitTimer = setTimeout(stampWait, next + 50);
+}
+
+/* The clock starts when a round is posed and stops the moment the agent commits,
+   so it measures the agent's silence and not the human's deliberation. */
+function trackWaiting() {
+  const posed = Boolean(doc)
+    && !game.isComplete(doc)
+    && doc.rounds[doc.roundIndex].state === 'posed';
+  if (!posed) {
+    waitingSince = null;
+  } else if (waitingSince === null) {
+    waitingSince = Date.now();
+  }
+  stampWait();
+}
+
 /* Filled in at deploy time. Empty strings simply drop the link. */
 const LINKS = {
   repoUrl: 'https://github.com/1m3r/webmcp-capability-environment',
@@ -91,13 +131,30 @@ function dispatch(action) {
   ctx.setDoc(result.doc);
 }
 
+/* The shared log is where the agent's voice reaches the screen its teammate is
+   actually looking at, and it was rendering `say` identically to `read` — the one
+   thing addressed to a person, styled like a machine event.
+
+   Three registers now: speech is set as speech, refusals keep the warm red they
+   already had, and the mechanical traffic recedes to what it is, a record. The
+   empty state says what will appear rather than showing an empty box. */
 function renderLog() {
-  el('log').innerHTML = doc.log
+  const node = el('log');
+  if (doc.log.length === 0) {
+    node.innerHTML = `<li class="log__empty">Nothing yet. Anything your agent says
+      out loud lands here — it is looking at this page, not at your chat.</li>`;
+    return;
+  }
+  node.innerHTML = doc.log
     .slice(-40)
     .reverse()
     .map((e) => {
       const detail = String(e.detail ?? '');
-      return `<li class="log__entry log__entry--${e.actor}" data-outcome="${e.outcome}">
+      const kind = e.outcome === 'refused' ? 'refusal'
+        : e.action === 'say' ? 'speech'
+        : 'event';
+      return `<li class="log__entry log__entry--${e.actor}"
+        data-outcome="${e.outcome}" data-kind="${kind}">
         <span class="log__actor">${e.actor}</span>
         <span class="log__action">${e.action}</span>
         <span class="log__detail">${detail.replace(/[<>&]/g, '')}</span>
@@ -217,6 +274,8 @@ function render() {
   if (screen !== lastScreen) stage.scrollTop = 0;
   lastScreen = screen;
 
+  trackWaiting();
+
   advanceIfWatching();
 
   const offered = game.atGrantMoment(doc);
@@ -282,7 +341,9 @@ el('restart').addEventListener('click', () => {
   transmissionSeen = null;
   grantWasOffered = false;
   lastScreen = null;
+  waitingSince = null;
   clearTimeout(readingTimer);
+  clearTimeout(waitTimer);
   try { localStorage.removeItem(game.storageKey); } catch { /* nothing to clear */ }
   waits.notify(0);   // release any agent waiting on a version that will never come
   render();
