@@ -54,6 +54,14 @@ body {
   color: var(--ink-dim);
   margin: 0;
 }
+/* The tool count is the whole WebMCP claim in two words, and it is the number
+   that ticks when a human grants a tier. It was one of four dim items in a row.
+   It reads first now, and the rest stay the context they are. */
+.bar__tools {
+  color: var(--ink);
+  font-size: var(--step-0);
+  transition: color var(--dur-quick) var(--ease-enter);
+}
 
 /* ---- progress -------------------------------------------------------- */
 
@@ -468,18 +476,48 @@ button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
 /* ---- start screen ---------------------------------------------------- */
 
-.start { width: min(100%, 46rem); }
-.start__title { font-family: var(--font-display); font-size: var(--step-3); margin: 0 0 var(--space-4); }
+.start { width: min(100%, 52rem); }
+.start__eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+  letter-spacing: 0.08em;
+  margin: 0 0 var(--space-2);
+}
+.start__title { font-family: var(--font-display); font-size: var(--step-3); margin: 0 0 var(--space-3); }
+
+/* Whether the other player has arrived, said at a size you can read from across
+   a desk — not in the corner in eleven pixels of mono. */
+.start__presence {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-5);
+  padding: var(--space-3);
+  border-left: 2px solid var(--rule);
+  background: var(--ground-raised);
+  border-radius: 0 0.5rem 0.5rem 0;
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  line-height: 1.5;
+}
+.start__presence[data-connected="true"] { color: var(--ink); }
+.start__presence[data-connected="false"] { color: var(--ink-dim); max-width: 58ch; }
+.start__entry { color: var(--ink-dim); }
+
 .start__modes { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
 .start__mode {
   display: grid;
   gap: var(--space-2);
+  align-content: start;
   text-align: left;
-  padding: var(--space-3);
+  padding: var(--space-4);
   font-family: var(--font-text);
   font-size: var(--step-0);
+  min-height: 11rem;
 }
-.start__mode strong { font-family: var(--font-display); font-size: var(--step-1); }
+.start__mode strong { font-family: var(--font-display); font-size: var(--step-2); }
 .start__mode span { color: var(--ink-dim); }
 .start__opt { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-4); }
 .start__note { color: var(--ink-dim); font-size: var(--step--1); margin: var(--space-1) 0 0; }
@@ -514,7 +552,19 @@ button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .results__mark { font-family: var(--font-mono); font-size: var(--step--1); margin: var(--space-2) 0 0; color: var(--ink-dim); }
 .results__round[data-verdict="landed"] .results__mark,
 .results__round[data-verdict="match"] .results__mark { color: var(--reveal); }
-.results__note { font-family: var(--font-mono); font-size: var(--step--1); color: var(--ink-dim); margin-top: var(--space-4); }
+.results__note { font-family: var(--font-mono); font-size: var(--step--1); color: var(--ink-dim); margin: var(--space-2) 0 0; }
+/* v2 §6: "the export controls made prominent". The point of this screen is that
+   it is worth keeping, and keeping it was a sentence pointing at the sidebar. */
+.results__keep {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--rule);
+}
+.results__keep button {
+  font-family: var(--font-text);
+  font-size: var(--step-0);
+  padding: var(--space-2) var(--space-4);
+}
 
 .panel__opt { display: flex; align-items: center; gap: var(--space-1); font-family: var(--font-mono); font-size: var(--step--1); color: var(--ink-dim); }
 
@@ -591,16 +641,28 @@ button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 }
 
 /* 11 characters of `get_dossier`, resolving one glyph at a time like a signal
-   coming in. steps(11) is the character count, not a round number. */
+   coming in. steps(11) is the character count, not a round number.
+
+   The reveal is a shutter that retracts, NOT an animated width. Width triggers
+   layout on every one of those eleven steps, which is the first thing to check
+   when motion feels cheap — and it is the one rule of the motion floor this file
+   was breaking. The shutter is a transform, so it lives on the compositor. */
 .transmission__name {
+  position: relative;
   font-family: var(--font-mono);
   font-size: var(--step-3);
   color: var(--ink);
   margin: 0;
   width: 11ch;
   max-width: 100%;
-  overflow: hidden;
   white-space: nowrap;
+}
+.transmission__name::after {
+  content: '';
+  position: absolute;
+  inset: 0 -0.1em 0 0;
+  background: var(--ground-raised);
+  transform-origin: right center;
   animation: resolve 900ms steps(11) 240ms both;
 }
 
@@ -646,16 +708,19 @@ button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   to   { opacity: 1; transform: none; }
 }
 @keyframes resolve {
-  from { width: 0; }
-  to   { width: 11ch; }
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
 }
 
 /* ---- the landing screen ------------------------------------------------ */
 
 /* No game means no shared log and nothing to export or restart, so the sidebar
    is furniture with nothing in it. The stage takes the whole width instead. */
-body[data-landing="true"] { grid-template-columns: 1fr; }
-body[data-landing="true"] .panel { display: none; }
+/* No game means no shared log and nothing to export or restart, so the sidebar
+   is furniture with nothing in it. That is true of the start screen too, which
+   was sitting in a narrow column beside an empty panel. */
+body[data-nogame="true"] { grid-template-columns: 1fr; }
+body[data-nogame="true"] .panel { display: none; }
 
 /* Shown when the page has nobody to register its tools with. Same ground, same
    faces, same tokens as the game — the point is that a judge without a WebMCP

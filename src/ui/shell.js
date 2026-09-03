@@ -165,6 +165,7 @@ function renderLog() {
 
 function renderStatus() {
   document.body.dataset.landing = String(showLanding());
+  document.body.dataset.nogame = String(!doc);
   el('s-entry').textContent = found ? found.entry : 'no model context';
   el('s-tools').textContent = `${registration.registered} tools`;
   el('s-tier').textContent = doc ? `tier ${doc.tier}` : 'no game';
@@ -256,7 +257,10 @@ function render() {
     return;
   }
   if (!doc) {
-    stage.innerHTML = game.renderStart();
+    stage.innerHTML = game.renderStart({
+      entry: found ? found.entry : null,
+      tools: registration.registered
+    });
     el('log').innerHTML = '';
     renderStatus();
     return;
@@ -317,6 +321,7 @@ stage.addEventListener('click', (event) => {
   /* Not a reducer action: dismissing the transmission changes nothing about the
      game, and an event for it would be noise in the run record. */
   if (action === 'dismiss') { transmissionSeen = doc.version; render(); }
+  if (action === 'export') exportGame();
 });
 
 stage.addEventListener('submit', (event) => {
@@ -349,7 +354,7 @@ el('restart').addEventListener('click', () => {
   render();
 });
 
-el('export').addEventListener('click', () => {
+function exportGame() {
   if (!doc) return;
   for (const file of buildExport(doc, game.renderPortrait)) {
     const url = URL.createObjectURL(new Blob([file.body], { type: file.type }));
@@ -359,7 +364,9 @@ el('export').addEventListener('click', () => {
     a.click();
     URL.revokeObjectURL(url);
   }
-});
+}
+
+el('export').addEventListener('click', exportGame);
 
 /* ---- WebMCP ---------------------------------------------------------- */
 

@@ -32,9 +32,22 @@ function controlsIn(html) {
   return found;
 }
 
+/* Controls the PAGE owns rather than the game. These are the human's alone —
+   there is no tool for any of them and there is no reducer action either: they
+   change what is on screen or what is on disk, not what is true about the game.
+
+   Declared explicitly rather than left to whichever screen a test happens to
+   scan. A control that is neither a legal reducer move nor named here is a
+   button wired to nothing, and the test below fails on it. */
+const PAGE_ONLY = new Set([
+  'export',    // downloads the three files; touches no state
+  'dismiss'    // closes the transmission; the shell holds that, not the document
+]);
+
 /* shell.js maps a data-action to a reducer action. This mirrors it. */
 function toAction(control) {
   if (control.action === 'judge') return { type: 'judge', verdict: control.verdict };
+  if (control.action === 'grant') return { type: 'grant_tier' };
   return { type: control.action };
 }
 
@@ -67,6 +80,7 @@ for (const mode of MODES) {
     walk(mode, (doc) => {
       const round = doc.rounds[doc.roundIndex];
       for (const control of controlsIn(renderRound(doc))) {
+        if (PAGE_ONLY.has(control.action)) continue;
         const result = reduce(doc, toAction(control), 0);
         assert.equal(result.ok, true,
           `${mode} round ${doc.roundIndex + 1} in state ${round.state}: the page offers ` +
@@ -113,7 +127,7 @@ for (const mode of MODES) {
       }
 
       /* Everything from here is a click. Take the first control on offer. */
-      const [control] = controlsIn(renderRound(doc));
+      const [control] = controlsIn(renderRound(doc)).filter((c) => !PAGE_ONLY.has(c.action));
       assert.ok(control,
         `${mode} round ${doc.roundIndex + 1}: the page draws no control in state ` +
         `${round.state} — the game cannot be advanced from here`);
@@ -155,4 +169,76 @@ test('the portrait export counts the verdict its mode actually records', async (
     assert.match(md, new RegExp(`8 of 8 judged ${good}`),
       `${mode}: the export miscounted a game where every round was ${good}`);
   }
+});
+
+
+/* Every screen, not just the round. The round-trip property was only ever
+   checked against renderRound, so a control added to the results screen or to
+   the grant offer was outside it — which is how `export` and `dismiss` arrived
+   without anything noticing they are not reducer actions at all. */
+test('every control on every screen is either a legal move or a declared page control', () => {
+  for (const mode of MODES) {
+    const seen = new Set();
+    let doc = createDoc(0, { mode });
+    let guard = 0;
+
+    const sweep = (d) => {
+      for (const control of controlsIn(renderGame(d, {}))) {
+        seen.add(control.action);
+        if (PAGE_ONLY.has(control.action)) continue;
+        const result = reduce(d, toAction(control), 0);
+        assert.equal(result.ok, true,
+          `${mode}: the page draws ${control.action}` +
+          `${control.verdict ? `=${control.verdict}` : ''} but the reducer refused it — ` +
+          `${result.message}`);
+      }
+    };
+
+    while (!isComplete(doc) && guard++ < 100) {
+      sweep(doc);
+      const round = doc.rounds[doc.roundIndex];
+      if (round.state === 'posed') {
+        doc = reduce(doc, { type: 'agent_submit', text: `a${doc.roundIndex}` }).doc;
+      } else if (round.state === 'agent_committed') {
+        doc = reduce(doc, { type: 'human_submit', text: `h${doc.roundIndex}` }).doc;
+      } else if (round.state === 'both_committed') {
+        doc = reduce(doc, { type: 'reveal' }).doc;
+      } else if (round.state === 'revealed') {
+        doc = reduce(doc, { type: 'judge', verdict: VERDICTS[mode][0] }).doc;
+      } else if (round.state === 'judged') {
+        if (doc.roundIndex + 1 >= doc.rounds.length) break;
+        doc = reduce(doc, { type: 'next' }).doc;
+      }
+    }
+    sweep(doc);   // the results screen
+
+    assert.ok(seen.has('export'), `${mode}: the results screen should offer the export`);
+    assert.ok(seen.has('reveal') && seen.has('judge') && seen.has('next'),
+      `${mode}: the sweep should have passed through the whole round`);
+  }
+});
+
+/* The grant offer and the transmission are screens too. */
+test('the grant offer and the transmission draw only wired controls', () => {
+  let doc = createDoc(0, { mode: 'portrait' });
+  for (let i = 0; i < 4; i++) {
+    if (i > 0) doc = reduce(doc, { type: 'next' }).doc;
+    doc = reduce(doc, { type: 'agent_submit', text: `a${i}` }).doc;
+    doc = reduce(doc, { type: 'human_submit', text: `h${i}` }).doc;
+    doc = reduce(doc, { type: 'reveal' }).doc;
+    doc = reduce(doc, { type: 'judge', verdict: 'landed' }).doc;
+  }
+
+  const offer = controlsIn(renderGame(doc, {}));
+  assert.ok(offer.some((c) => c.action === 'grant'), 'the offer should be showing');
+  for (const control of offer) {
+    if (PAGE_ONLY.has(control.action)) continue;
+    assert.equal(reduce(doc, toAction(control), 0).ok, true,
+      `the grant offer draws ${control.action}, which the reducer refuses`);
+  }
+
+  const granted = reduce(doc, { type: 'grant_tier' }).doc;
+  const moment = controlsIn(renderGame(granted, {}));
+  assert.deepEqual(moment.map((c) => c.action), ['dismiss'],
+    'the transmission offers exactly one control, and the page owns it');
 });
