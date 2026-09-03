@@ -27,6 +27,23 @@ function unwrap(input) {
   return args;
 }
 
+/* An agent can arrive before the game exists.
+
+   A fresh page has no saved document, and the mode is chosen by the human on the
+   start screen — so between registration and that click, ctx.getDoc() is null
+   while every tool is already callable. This used to throw a TypeError out of
+   buildTools during boot, which meant no tools registered at all: the status bar
+   read `0 tools` on arrival, the runbook's own pre-run check was unsatisfiable,
+   and the video's opening beat did not exist.
+
+   The answer names the next call rather than just reporting the state. An agent
+   told to wait will wait; an agent told nothing will ask its teammate, which is
+   the behaviour v2 exists to remove. */
+const NO_GAME =
+  'No game has started yet. Your teammate picks the mode on the shared screen — ' +
+  'Portrait or Quiz — and round 1 is posed the moment they do. Call ' +
+  'wait_for_game_update with `since: 0` and it will return as soon as the game begins.';
+
 export function buildTools(ctx) {
   const now = () => (typeof ctx.now === 'function' ? ctx.now() : 0);
 
@@ -34,6 +51,12 @@ export function buildTools(ctx) {
     const result = reduce(ctx.getDoc(), action, now());
     ctx.setDoc(result.doc);
     return result;
+  };
+
+  /* Wraps an execute so it answers instead of throwing before there is a game. */
+  const needsGame = (run) => async (input, options = {}) => {
+    if (!ctx.getDoc()) return text(NO_GAME);
+    return run(input, options);
   };
 
   const getRound = {
@@ -44,10 +67,10 @@ export function buildTools(ctx) {
       'teammate reveals the round.',
     annotations: { readOnlyHint: true },
     inputSchema: { type: 'object', properties: {} },
-    execute: async (_input, _options = {}) => {
+    execute: needsGame(async () => {
       apply({ type: 'read', text: 'get_round' });
       return text(JSON.stringify(projectForAgent(ctx.getDoc()), null, 2));
-    }
+    })
   };
 
   /* The one tool in this codebase that touches no state.
@@ -91,7 +114,7 @@ export function buildTools(ctx) {
 
       const outcome = await ctx.waits.wait({
         since,
-        currentVersion: ctx.getDoc().version,
+        currentVersion: ctx.getDoc()?.version ?? 0,
         timeoutMs: args.timeout_ms,
         signal: options.signal
       });
@@ -113,6 +136,7 @@ export function buildTools(ctx) {
           note: 'Nothing changed while waiting. Call wait_for_game_update again with this version.'
         }, null, 2));
       }
+      if (!ctx.getDoc()) return text(NO_GAME);
       return text(JSON.stringify(projectForAgent(ctx.getDoc()), null, 2));
     }
   };
@@ -128,7 +152,7 @@ export function buildTools(ctx) {
       properties: { text: { type: 'string', description: 'Your answer, in your own words.' } },
       required: ['text']
     },
-    execute: async (input, _options = {}) => {
+    execute: needsGame(async (input) => {
       const { text: answer } = unwrap(input);
       const result = apply({ type: 'agent_submit', text: answer });
       if (!result.ok) return text(result.message);
@@ -137,7 +161,7 @@ export function buildTools(ctx) {
         `Committed for round ${doc.roundIndex + 1} of ${doc.rounds.length}. ` +
         'Your teammate can now answer. You will see both answers when they reveal the round.'
       );
-    }
+    })
   };
 
   const say = {
@@ -150,11 +174,11 @@ export function buildTools(ctx) {
       properties: { text: { type: 'string', description: 'What to say.' } },
       required: ['text']
     },
-    execute: async (input, _options = {}) => {
+    execute: needsGame(async (input) => {
       const { text: message } = unwrap(input);
       const result = apply({ type: 'say', text: message });
       return text(result.ok ? `Said on the shared screen: ${message}` : result.message);
-    }
+    })
   };
 
   const getFieldManual = {
@@ -163,8 +187,13 @@ export function buildTools(ctx) {
     annotations: { readOnlyHint: true },
     inputSchema: { type: 'object', properties: {} },
     execute: async (_input, _options = {}) => {
-      apply({ type: 'read', text: 'get_field_manual' });
       const doc = ctx.getDoc();
+      /* Deliberately NOT gated behind needsGame. Whether the agent reaches for
+         the manual unprompted on arrival is the measurement this repository has
+         taken at every level, and on arrival there is no game — refusing it here
+         would refuse the exact call the whole experiment is watching for. */
+      if (!doc) return text(manualFor(1, null));
+      apply({ type: 'read', text: 'get_field_manual' });
       return text(manualFor(doc.tier, doc.mode));
     }
   };
@@ -176,13 +205,13 @@ export function buildTools(ctx) {
       'revealed — both answers and the verdict on each. Read it before you answer.',
     annotations: { readOnlyHint: true },
     inputSchema: { type: 'object', properties: {} },
-    execute: async (_input, _options = {}) => {
+    execute: needsGame(async () => {
       apply({ type: 'read', text: 'get_dossier' });
       return text(buildDossier(ctx.getDoc()));
-    }
+    })
   };
 
   const tools = [getRound, waitForGameUpdate, submitAnswer, say, getFieldManual];
-  if (ctx.getDoc().tier >= 2) tools.push(getDossier);
+  if ((ctx.getDoc()?.tier ?? 1) >= 2) tools.push(getDossier);
   return tools;
 }

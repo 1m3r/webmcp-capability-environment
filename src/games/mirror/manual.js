@@ -82,7 +82,21 @@ reach for objects or for feelings. A miss in the dossier is worth more than a
 hit: it marks a place where your model of them was wrong, and it tells you which
 direction to correct.`;
 
+/* Read on arrival, before the human has picked a mode. The ordering and the
+   wait loop are true in both modes and are what the agent most needs first; the
+   mode-specific half arrives when the mode does. */
+const NO_MODE = `
+
+NO GAME HAS STARTED YET
+
+Your teammate picks the mode on the shared screen — Portrait or Quiz — and round
+1 is posed the moment they do. Nothing is required of you until then: call
+wait_for_game_update with \`since: 0\` and it will return as soon as the game
+begins. Read this again once it has, and it will tell you how the mode they
+chose is played.`;
+
 export function manualFor(tier, mode = 'portrait') {
+  if (mode === null) return CORE + NO_MODE;
   const base = CORE + (mode === 'quiz' ? QUIZ : PORTRAIT);
   return tier >= 2 ? base + TIER_2 : base;
 }
