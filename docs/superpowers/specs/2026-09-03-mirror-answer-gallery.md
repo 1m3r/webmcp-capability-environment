@@ -2,8 +2,8 @@
 
     Owner:   1m3r / DGOS
     Date:    3 September 2026, 00:30 CEST
-    Status:  SPECIFIED, NOT BUILT — build after run 2, per the operator's
-             priority call of 3 September 00:20
+    Status:  BUILT, 3 September. 165 tests green (was 138).
+             Waiting on a live agent to fill it.
     Branch:  feat/player-two
     Mode:    portrait only
     Extends: docs/superpowers/specs/2026-09-02-mirror-submission-design.md
@@ -154,23 +154,39 @@ fail silently is acceptable; one that can break the demo is not.
 - A share view renders one composition standalone, at a fixed aspect, for
   posting. Credits included, not optional.
 
-## 9. Build order, and the cut line
+## 9. Built — what landed and what did not
 
-Built **after run 2**, from run 2's exported JSON — the tool accepts attachments
-to a finished game, so a completed run can be illustrated afterwards and filmed
-as the video's closing shot.
+    [x] the tool: schema, refusals, immutability            648b693
+    [x] the composition, verified against real photographs  648b693
+    [x] the gallery on the results screen + fallback        648b693
+    [x] the manual's portrait section: sources and licences 648b693
+    [x] export carries images and credits                   648b693
+    [ ] the share view — below the cut line, not built
 
-    1  the tool: schema, refusals, immutability, tests      ~40m
-    2  the composition CSS, against fixture URLs            ~40m
-    3  the gallery on the results screen + fallback         ~30m
-    4  the manual's portrait section: sources and licences  ~15m
-    5  export carries images and credits                    ~20m
-    --- cut line: everything below is optional ---
-    6  the share view
+Two things changed while building.
 
-**Cut whole if the 20:00 video gate is at risk.** The submission is complete
-without this, and shipping a half-drawn gallery would cost more than not shipping
-one.
+**The tool surface became mode-aware.** `illustrate_answer` is a portrait verb,
+and this codebase's standing rule is that a verb the game does not offer is
+ABSENT rather than present and refusing. `TOOL_NAMES_BY_TIER` could not express
+that, so `toolNamesFor(mode, tier)` replaced it. The transmission and the landing
+screen read the same function, so the body they display cannot drift from the
+body that registers.
+
+**`illustrate` is the only action that targets a round other than the one in
+play.** Every other transition patches `doc.rounds[doc.roundIndex]`, because
+every other transition is a move in the current round. Illustration happens after
+a reveal, and the agent's subagents come back when they come back — possibly
+several rounds later, possibly after the game is over. So it carries its own
+round number.
+
+### Still to do, and it needs a live agent
+
+Nothing has ever called `illustrate_answer`. The composition was verified against
+real photographs, the refusals against tests — but whether an agent reads the
+manual, understands that the page cannot do this itself, and comes back with four
+images that actually match an answer is unmeasured. That is the same open
+question as `get_field_manual`, one layer up, and it is worth recording as a
+result either way.
 
 ## 10. What is not claimed
 
