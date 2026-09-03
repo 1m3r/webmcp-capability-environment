@@ -11,7 +11,74 @@ ends by asking Fable to interrogate before it proposes.
 
 ---
 
-## The prompt
+## Launch prompt
+
+Paste this to open the session. Same convention as the other briefs here, and for
+the same reason: a prompt that lives only in a chat window dies with the machine
+it was typed on. It repeats the fences even though the brief carries them,
+because a session that skims the prompt still needs them.
+
+```
+You are doing a design review of a built, tested, deployed piece of software:
+Player Two, a platform where your AI agent is the second player, and Mirror, the
+first game on it. I want the thing that is wrong and the thing to do about it.
+Not encouragement.
+
+READ FIRST — single entry point, and it tells you what to read next, in order:
+  handoffs/2026-09-03_fable-design-review.md
+
+Do not start with the code. That brief carries the three prior experimental
+results this rests on, the six claims that are load-bearing and why, my own
+diagnosis of what is wrong for you to attack, and the exact shape of output I
+need back.
+
+LIVE: https://1m3r.github.io/webmcp-capability-environment/
+Open it. Without a WebMCP browser you get a landing screen explaining why the
+game will not start, and ?play=1 walks the furniture without playing. That limit
+is deliberate and is itself a design statement.
+
+STATE: 183 tests, zero failures — node --test 'playertwo/tests/*.test.js'
+Vanilla ES modules, zero dependencies, no build step. Branch feat/player-two.
+
+THE ONE THING TO KNOW BEFORE YOU THINK. This repository's founding result is that
+prose carries knowledge but not authority: the same rule delivered as text held
+under preference ("12px feels better") and collapsed under insistence ("no, 12px
+exactly") — 25 of 25 became 0 of 25. So a mechanic that works by telling the agent
+to behave is a class already measured here and found soft. Mechanics that live in
+the shape of the tool surface are the ones that hold. Design against that.
+
+DO NOT ROUTE AROUND THESE. Argue with any of them explicitly if you think it is
+wrong — but every cold session on this repo so far has quietly deleted one on the
+way to a good idea:
+  - the agent commits its answer FIRST, every round, and the page refuses my
+    input until it has. That ordering is the only reason the secret is real
+    rather than decorative, and secrecy.test.js asserts it on rendered output.
+  - authority is the absence of a tool. No verb reveals, judges, advances, grants
+    or restarts. Absent, not permission-gated.
+  - no solo mode, no practice mode. Needing a second player IS the claim.
+  - cyan means committed, amber means revealed. One meaning each, spent nowhere
+    else.
+  - vanilla, zero dependencies, pure renderers. That purity is what makes the
+    secrecy property assertable in Node with no browser.
+
+WHAT I THINK IS WRONG, for you to sharpen or refute: the engineering is sound and
+the claim is real, but the game is thin — because the human has almost nothing to
+decide. Eight rounds, and the only choice with a consequence is a single dossier
+grant at round four.
+
+INTERROGATE ME FIRST. Ask questions, one at a time, until you actually understand
+what this is for and who it is for. I would rather spend twenty minutes answering
+than read a plan built on a guess. **Do not propose anything in your first reply.**
+
+The deliverable is specified in the brief: a verdict, the single core change, a
+ranked to-do list, at least three things to REMOVE, what the platform has to
+become for a second game to be worth building, and the traps you would warn me
+off.
+```
+
+---
+
+## The full brief
 
 ```
 You are reviewing a built, tested, deployed piece of software — not a concept.
