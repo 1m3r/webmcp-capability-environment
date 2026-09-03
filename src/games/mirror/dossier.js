@@ -9,7 +9,7 @@
    here. */
 
 import { labelFor } from './render.js';
-import { goodVerdict } from './game.js';
+import { goodVerdict, isWatching } from './game.js';
 
 function entriesFor(doc, target) {
   const lines = [];
@@ -51,8 +51,16 @@ export function buildDossier(doc) {
     '',
     ...section('About you (the agent)', entriesFor(doc, 'agent')),
     '',
-    `${hits} of ${judged.length} ${doc.mode === 'quiz' ? 'matched' : 'landed'}.`,
+    /* A watched game carries no verdicts, so there is no rate to report and no
+       miss to learn from — the dossier is then a record of what was said, which
+       is still the most useful thing the agent can be handed. */
+    isWatching(doc)
+      ? `${seen.length} rounds read so far, and none of them judged.`
+      : `${hits} of ${judged.length} ${doc.mode === 'quiz' ? 'matched' : 'landed'}.`,
     '',
-    'Use this. A miss tells you more than a hit does: it is the shape of a wrong assumption.'
+    isWatching(doc)
+      ? 'Use this. It is everything you have already said about them; do not repeat yourself, ' +
+        'and let what you notice accumulate rather than resetting each round.'
+      : 'Use this. A miss tells you more than a hit does: it is the shape of a wrong assumption.'
   ].join('\n');
 }

@@ -101,6 +101,12 @@ body {
 .card--agent { transform: translate(-0.75rem, -1.25rem); }
 .card--human { transform: translate(0.75rem, 1.25rem); }
 
+/* Watching has one answer, so it has one card. The asymmetric offset says "it
+   answered first"; with nothing to be first to, it says nothing, and a lone card
+   shoved up and left just looks misaligned. */
+.round__cards[data-single="true"] { grid-template-columns: 1fr; }
+.round__cards[data-single="true"] .card--agent { transform: none; }
+
 .card {
   border: 1px solid var(--rule);
   border-radius: 0.75rem;

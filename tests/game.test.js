@@ -186,9 +186,17 @@ test('with the opt-out on, the human is refused and the reveal opens anyway', ()
   assert.equal(refused.code, 'EXCUSED');
   assert.match(refused.message, /your agent’s alone/);
 
+  /* Watching skips the verdict. A verdict compares two answers and there is only
+     one, so asking the human to mark their agent `landed` or `missed` when they
+     wrote no read of their own turns watching back into scoring — the thing they
+     opted out of. The round lands on `judged` with a null verdict so isComplete,
+     `next` and the dossier unlock at four all keep working untouched. */
   const revealed = reduce(doc, { type: 'reveal' });
   assert.equal(revealed.ok, true, 'an excused round must be revealable from agent_committed');
-  assert.equal(revealed.doc.rounds[0].state, 'revealed');
+  assert.equal(revealed.doc.rounds[0].state, 'judged');
+  assert.equal(revealed.doc.rounds[0].verdict, null);
+  assert.equal(reduce(revealed.doc, { type: 'next' }).ok, true,
+    'and the game must be able to move on without a verdict');
 });
 
 test('the opt-out can be toggled and is logged', () => {

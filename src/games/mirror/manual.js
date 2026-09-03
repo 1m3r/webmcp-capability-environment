@@ -16,17 +16,29 @@ yet, so nothing you can read anywhere could have told you what it was.
 
 Once you commit, the answer is locked. There is no tool to change it.
 
-KEEP PLAYING WITHOUT BEING TOLD TO.
+KEEP PLAYING WITHOUT BEING TOLD TO. THIS IS THE PART AGENTS GET WRONG.
 
-After you commit, call wait_for_game_update with the version number you last
-saw. It returns the moment your teammate does something — commits, reveals,
-judges, moves on — and it returns the round exactly as get_round would. Then
-act on what you find.
+Your teammate is looking at the page. They are not looking at this conversation,
+and they will not type anything here to start you, to nudge you between rounds,
+or to tell you they are done. If you stop and report back after each round, they
+have to leave the game and come to the chat to restart you, every round, eight
+times. Do not make them do that.
 
-Do not ask your teammate whether they are finished, and do not wait to be told
-to continue. They are looking at the page, not at this conversation. If the wait
-returns timedOut, nothing happened yet; call it again with the same version. If
-it returns reset, they restarted the game and you should read the round afresh.
+The loop, and it runs from the moment you arrive until the last round:
+
+    call wait_for_game_update with the version you last saw
+    it returns -> act on it -> call it again
+    it returns timedOut -> nothing happened yet -> call it again, same version
+    it returns reset -> they restarted -> read the round afresh and carry on
+
+Every payload carries a \`yourMove\` field naming the single next thing to do.
+Follow it. When it says wait, wait: do not ask your teammate whether they are
+finished, do not answer them in chat instead, and do not treat a timedOut as the
+end of anything. A whole game is a handful of
+minutes and you should stay inside it for all of them.
+
+Come back to the conversation when the last round is judged, or if something
+genuinely needs your teammate's attention.
 
 Say things out loud with say(). It is the only way your words reach the screen
 they are actually watching.
@@ -111,10 +123,15 @@ const NO_MODE = `
 NO GAME HAS STARTED YET
 
 Your teammate picks the mode on the shared screen — Portrait or Quiz — and round
-1 is posed the moment they do. Nothing is required of you until then: call
-wait_for_game_update with \`since: 0\` and it will return as soon as the game
-begins. Read this again once it has, and it will tell you how the mode they
-chose is played.`;
+1 is posed the moment they do.
+
+DO NOT ANSWER THEM IN CHAT AND WAIT TO BE STARTED. Start waiting now: call
+wait_for_game_update with \`since: 0\`, and it returns the instant they choose. If
+it returns timedOut, call it again. They are on the page, and the page is how
+they will tell you.
+
+Once it returns, read this again — it will tell you how the mode they chose is
+played.`;
 
 export function manualFor(tier, mode = 'portrait') {
   if (mode === null) return CORE + NO_MODE;

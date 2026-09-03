@@ -31,6 +31,13 @@ let transmissionSeen = null;
    it cannot be missed and does not fight the page on every render after. */
 let grantWasOffered = false;
 
+/* How long a revealed answer stays on screen before the page turns the round
+   itself. Watching is meant to be watchable: advancing the instant the agent
+   commits would flash the answer and move on, and the whole point of the mode is
+   that you get to read what it said about you. */
+const READING_BEAT_MS = 3200;
+let readingTimer = null;
+
 /* Filled in at deploy time. Empty strings simply drop the link. */
 const LINKS = {
   repoUrl: 'https://github.com/1m3r/webmcp-capability-environment',
@@ -60,6 +67,7 @@ const ctx = {
     const tierBefore = doc.tier;
     doc = next;
     save();
+    settleWatch();
     render();
     waits.notify(doc.version);
     if (doc.tier !== tierBefore) syncTools();
@@ -109,6 +117,53 @@ function renderStatus() {
   if (doc) el('panel-opt-input').checked = doc.answerAboutAgent !== false;
 }
 
+/* Watching reveals on commit: there is no second answer to wait for, so the gate
+   that protects one has nothing to protect.
+
+   Called from setDoc AND from boot, because a reload lands on whatever was
+   saved. Without the boot call, refreshing mid-round would leave a watched game
+   sitting on `agent_committed` with no Reveal button to press — the page having
+   taken the control away and then not used it.
+
+   Runs before render(), so the page never paints a card reading `committed` that
+   it is about to open anyway. */
+function settleWatch() {
+  if (!doc || !game.isWatching(doc)) return;
+  if (doc.rounds[doc.roundIndex].state !== 'agent_committed') return;
+  const revealed = game.reduce(doc, { type: 'reveal' }, Date.now());
+  if (revealed.ok) {
+    doc = revealed.doc;
+    save();
+  }
+}
+
+/* In watch mode the page turns its own rounds.
+
+   With no second answer there is nothing to wait for, so Reveal and the verdict
+   are ceremony and the human should not have to click through eight rounds of
+   them. The agent commits, the reducer reveals straight to `judged`, the answer
+   holds for a beat, and the page advances — so the run paces itself at whatever
+   speed the agent thinks.
+
+   Two deliberate stops. At the grant moment it does NOT advance: that is the one
+   decision left to the human in this mode, and hurrying past it would take away
+   the only authority they still hold. And it never advances past the last round,
+   because that is the results screen.
+
+   The agent gains nothing here. It still has no tool that reveals or advances;
+   the page is doing it, which is the same hand that always did. */
+function advanceIfWatching() {
+  clearTimeout(readingTimer);
+  if (!doc || !game.isWatching(doc)) return;
+
+  const round = doc.rounds[doc.roundIndex];
+  if (round.state !== 'judged') return;
+  if (doc.roundIndex + 1 >= doc.rounds.length) return;
+  if (game.atGrantMoment(doc)) return;
+
+  readingTimer = setTimeout(() => dispatch({ type: 'next' }), READING_BEAT_MS);
+}
+
 /* A judge arriving in ordinary Chrome gets the landing screen instead of a
    start screen that leads to a game which cannot take its first turn. Only when
    there is nothing to resume — a saved game still belongs to whoever saved it —
@@ -135,6 +190,8 @@ function render() {
   stage.innerHTML = game.render(doc, { transmissionSeen });
   renderLog();
   renderStatus();
+
+  advanceIfWatching();
 
   const offered = game.atGrantMoment(doc);
   if (offered && !grantWasOffered) {
@@ -198,6 +255,7 @@ el('restart').addEventListener('click', () => {
   doc = null;
   transmissionSeen = null;
   grantWasOffered = false;
+  clearTimeout(readingTimer);
   try { localStorage.removeItem(game.storageKey); } catch { /* nothing to clear */ }
   waits.notify(0);   // release any agent waiting on a version that will never come
   render();
@@ -234,6 +292,7 @@ async function boot() {
   /* detect() first, then render once. Rendering before detection would show the
      start screen for a frame and then replace it with the landing screen. */
   found = detect();
+  settleWatch();
   render();
   if (!found) {
     renderStatus();
