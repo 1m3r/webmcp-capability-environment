@@ -153,6 +153,7 @@ so nothing about the result is attributable to a toolchain.
       game.js                the reducer: rounds, sittings, the close, the level
       questions.js           the decks, per game, unlocked by level
       dossier.js             what the agent may read: granted history only
+      history.js             the same channel lengthwise, by question, at tier 4
       manual.js              what each tier hands the agent
       tools.js               the tool surface, per game and tier
       render.js              state -> HTML, and state -> portrait markdown
