@@ -117,3 +117,34 @@ Show either answer before the reveal. The renderer is a pure function and
 `secrecy.test.js` asserts this on its output, so a leak here is a failing test
 rather than a discovered embarrassment — but the CSS could still do it with a
 `::after` or a title attribute. It must not.
+
+## The sittings screens — 3 September 2026
+
+Built on the committed tone, not a new one. The gate's fixed axes here are
+type and palette (the tone); the open axes were layout and stance, and each
+new screen takes one stance:
+
+| screen | stance | what carries it |
+|---|---|---|
+| the round, Perspective | one reader, one card | the card is the whole stage; the composition lands *inside* it at the reveal, on `--ease-signal`, with the why in mono beneath |
+| the response | a decision that costs something | two verdict buttons and one optional line; the label says where the correction goes |
+| the close | the most consequential decision, made once | the sitting stays above; a raised box lands beneath it with three grants, no default, no accent |
+| between sittings | the keepsake as a screen | eyebrow · headline · decks · then the portrait newest first, each sitting labelled with its grant |
+| the proposal | an offer, not a state | raised box on `--ease-enter`, display-scale question, two controls, no accent |
+
+**Amber on the progress marks and on a response mark means a read that was
+revealed and kept.** It is the same meaning as `revealed`, not a third one: a
+kept read is a reveal that stayed. Nothing new spends cyan.
+
+**Locked decks are not hidden.** They render disabled with the level that opens
+them, because a body that grows should be visible growing — the same reason the
+transmission shows the whole tool list with the new verb marked.
+
+**The instruments are off by default.** The shared log, the level and the
+version are the experiment's; `?instrument=on` brings them back. The tool count
+never leaves the bar.
+
+**Honest limit.** These screens did not go through a three-direction pass of
+their own; they inherit the tone's decisions and diverge on stance only. If the
+portrait screen is ever reworked, that is the pass to run — with type and
+palette declared fixed on the canvas.

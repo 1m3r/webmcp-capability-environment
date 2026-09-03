@@ -60,9 +60,16 @@ the shape of the tool that hands it the dossier.
 ### Levels
 
 Level is the number of sittings you have closed, plus one. Decks unlock by
-level. So does your agent's body: when you close your first sitting,
-`get_dossier` registers and the status bar ticks **5 tools → 6 tools** while
-you watch. Its body grew because you clicked.
+level. So does your agent's body, one verb per close:
+
+| close | verb | what it lets the agent do |
+|---|---|---|
+| first | `get_dossier` | read what you opened from closed sittings |
+| second | `propose_question` | put one question on the table for the next sitting — you accept or decline it on the screen, and an accepted one is asked last |
+| third | `get_portrait_history` | read how its reads of you moved, question by question, across everything you opened |
+
+Each time, the status bar ticks the count up while you watch. Its body grew
+because you clicked. There is no fourth verb; after that, level only counts.
 
 ## Your agent keeps playing on its own
 

@@ -105,3 +105,8 @@ and starts as new applications rather than as more levels of this one.
   the persistent portrait, the close with three grants, images at commit
   verified at the tool boundary, three games chosen separately, instrument
   layer. 179 tests. `feat/player-two` untouched for the submission.
+- 2026-09-03 · Levels 3 and 4 built on the same branch: `propose_question`
+  (agent proposes, human click accepts, asked last in the next sitting) and
+  `get_portrait_history` (reads by question across opened sittings). One verb
+  per close, top tier 4. 198 tests. Floor checker reports one easing because
+  it reads `app.css` alone; the four curves live in `tokens.css`.
