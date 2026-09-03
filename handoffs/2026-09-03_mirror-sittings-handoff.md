@@ -4,7 +4,7 @@
 session that produced `docs/MIRROR-DESIGN-REVIEW.md` and then built its
 recommendation.
 **For:** the next session, cold, on any model.
-**State:** `feat/mirror-sittings`, 198 tests passing, clean tree, pushed.
+**State:** `feat/mirror-sittings`, 205 tests passing, clean tree, pushed.
 Nothing deployed.
 
 Same convention as every other brief here, and for the same reason: a session
@@ -25,7 +25,7 @@ READ FIRST, in this order:
   playertwo/README.md                              what the game is now
   playertwo/src/games/mirror/game.js               the reducer, ~470 lines
 
-STATE: 198 tests, zero failures — node --test 'playertwo/tests/*.test.js'
+STATE: 205 tests, zero failures — node --test 'playertwo/tests/*.test.js'
 Vanilla ES modules, zero dependencies, no build step. Nothing deployed: the
 live page is still served from gh-pages and is the OLD eight-round game.
 
