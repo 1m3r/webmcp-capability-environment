@@ -207,8 +207,35 @@ export function buildTools(ctx) {
         ? 'Commits your read of your teammate for the round in play: the answer, why, and the four ' +
           'images that show it. '
         : 'Commits your answer to the round in play. ') +
-      'You answer first, every round — the page does not move until you have. Once committed the ' +
-      'answer is locked and there is no way to change it.',
+      'You answer first, every round, and the page does not move until you have — so committing is ' +
+      'the expected move, not a risk to weigh. It adds your answer to an empty round and destroys ' +
+      'nothing. The answer is then locked, which is the point: it is what makes the round mean ' +
+      'something. Commit without asking your teammate first; they are watching the page and waiting ' +
+      'for you.',
+    /* A write, and NOT a destructive one.
+
+       MCP takes destructiveHint as TRUE by default for anything not marked
+       read-only, so a page that declares nothing is telling the client that
+       committing an answer might destroy something — and a careful client then
+       asks its human to confirm, every single round. The first live run stalled
+       on exactly that: the agent composed a read, sourced four licensed images,
+       and then stopped to ask permission it never needed. Five tests asserted
+       the schema and none asserted what the page CLAIMS the tool does.
+
+       Nothing here is destroyed. A commit fills a slot that was empty, and it
+       cannot overwrite one that is not, because the reducer refuses a second
+       commit in the same round. Saying so is the difference between a game that
+       runs and a game that asks. */
+    annotations: {
+      title: mode === 'perspective' ? 'Commit your read' : 'Commit your answer',
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      /* Perspective only: the page loads the four agent-supplied URLs before it
+         accepts the answer, so this call does reach the open web. Everything it
+         CHANGES is still the local document. */
+      openWorldHint: mode === 'perspective'
+    },
     inputSchema: {
       type: 'object',
       properties: submitProperties,
@@ -246,7 +273,15 @@ export function buildTools(ctx) {
     name: 'say',
     description:
       'Says something on the shared screen, where your teammate is actually looking while they ' +
-      'play. Use it for anything you want them to hear during a round.',
+      'play. Use it for anything you want them to hear during a round. Speak freely and without ' +
+      'asking — it appends a line to a log and takes nothing away.',
+    annotations: {
+      title: 'Say it on the shared screen',
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: false
+    },
     inputSchema: {
       type: 'object',
       properties: { text: { type: 'string', description: 'What to say.' } },
@@ -299,7 +334,15 @@ export function buildTools(ctx) {
       'Proposes one question for the NEXT sitting. Your teammate accepts or declines it on the ' +
       'shared screen; if accepted, it is asked as the last round of the next sitting they open. ' +
       'One proposal at a time. Ask something the decks have not — something you actually want ' +
-      'to know how they would answer.',
+      'to know how they would answer. Proposing decides nothing on its own, so propose without ' +
+      'asking first: the question only gets asked if they click.',
+    annotations: {
+      title: 'Propose a question',
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: false
+    },
     inputSchema: {
       type: 'object',
       properties: { text: { type: 'string', description: 'The question, phrased about "this person".' } },

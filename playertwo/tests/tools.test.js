@@ -199,3 +199,69 @@ test('every tool accepts the spec signature and survives a missing options objec
   const out = await byName(h.tools(), 'get_round').execute({});
   assert.ok(textOf(out).length > 0, 'a client that omits options must not crash the tool');
 });
+
+/* ---- what the page CLAIMS each verb does --------------------------------
+
+   The second thing the first live run found. MCP takes destructiveHint as TRUE
+   by default for any tool not marked read-only, so a page that declares nothing
+   is telling the client that committing an answer might destroy something. A
+   careful client then asks its human to confirm, every round — and the run
+   stalled with the agent holding a finished read, four licensed images, and a
+   question nobody needed to answer.
+
+   Every test in this file asserted the SHAPE of the surface. None asserted what
+   the surface says about itself. These do. */
+
+const READS = ['get_round', 'wait_for_game_update', 'get_field_manual', 'get_dossier', 'get_portrait_history'];
+const WRITES = ['submit_answer', 'say', 'propose_question'];
+
+/* Every verb the game can ever register, in every game. */
+function wholeSurface(mode) {
+  return harness({ ...createDoc(0, { mode }), level: 4 }).tools();
+}
+
+test('every verb declares what it does — none is left to the client default', () => {
+  for (const mode of MODES) {
+    for (const tool of wholeSurface(mode)) {
+      assert.ok(tool.annotations, `${mode}/${tool.name} declares no annotations at all`);
+      assert.equal(typeof tool.annotations.readOnlyHint, 'boolean',
+        `${mode}/${tool.name} does not say whether it writes`);
+    }
+  }
+});
+
+test('a read is marked read-only, and a write is marked NOT destructive', () => {
+  for (const mode of MODES) {
+    for (const tool of wholeSurface(mode)) {
+      if (READS.includes(tool.name)) {
+        assert.equal(tool.annotations.readOnlyHint, true, `${mode}/${tool.name} reads and should say so`);
+        continue;
+      }
+      assert.ok(WRITES.includes(tool.name), `${mode}/${tool.name} is neither a known read nor a known write`);
+      assert.equal(tool.annotations.readOnlyHint, false);
+      assert.equal(tool.annotations.destructiveHint, false,
+        `${mode}/${tool.name} is not destructive, and leaving this unsaid makes a client ask ` +
+        'its human for permission on every call');
+      assert.equal(tool.annotations.idempotentHint, false,
+        `${mode}/${tool.name}: a second identical call is refused, not repeated`);
+    }
+  }
+});
+
+test('committing is described as the expected move rather than a hazard', () => {
+  const submit = byName(harness(open(createDoc(0, { mode: 'perspective' }))).tools(), 'submit_answer');
+  assert.match(submit.description, /expected move/);
+  assert.match(submit.description, /destroys nothing/);
+  assert.match(submit.description, /without asking/i,
+    'the agent stopped to ask permission it did not need, so the surface says not to');
+  assert.equal(submit.annotations.title, 'Commit your read');
+});
+
+test('only the perspective commit reaches the open web, because only it loads images', () => {
+  assert.equal(byName(harness(open(createDoc(0, { mode: 'perspective' }))).tools(), 'submit_answer')
+    .annotations.openWorldHint, true);
+  for (const mode of ['both', 'quiz']) {
+    assert.equal(byName(harness(open(createDoc(0, { mode }))).tools(), 'submit_answer')
+      .annotations.openWorldHint, false, `${mode} commits touch nothing outside the page`);
+  }
+});

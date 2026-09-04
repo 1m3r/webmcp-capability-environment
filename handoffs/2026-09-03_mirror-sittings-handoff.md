@@ -4,7 +4,7 @@
 session that produced `docs/MIRROR-DESIGN-REVIEW.md` and then built its
 recommendation.
 **For:** the next session, cold, on any model.
-**State:** `feat/mirror-sittings`, 205 tests passing, clean tree, pushed.
+**State:** `feat/mirror-sittings`, 209 tests passing, clean tree, pushed.
 Nothing deployed.
 
 Same convention as every other brief here, and for the same reason: a session
@@ -25,7 +25,7 @@ READ FIRST, in this order:
   playertwo/README.md                              what the game is now
   playertwo/src/games/mirror/game.js               the reducer, ~470 lines
 
-STATE: 205 tests, zero failures — node --test 'playertwo/tests/*.test.js'
+STATE: 209 tests, zero failures — node --test 'playertwo/tests/*.test.js'
 Vanilla ES modules, zero dependencies, no build step. Nothing deployed: the
 live page is still served from gh-pages and is the OLD eight-round game.
 
@@ -156,6 +156,19 @@ old `p2.mirror.v1` key is dead and is not migrated.
   the verified-asset gate, the instrument layer, tiers as data.
 
 ## 6. Traps already paid for
+
+- **MCP takes `destructiveHint` as TRUE by default** for any tool not marked
+  read-only. A write tool that declares no annotations is therefore telling the
+  client it might destroy something, and a careful client asks its human to
+  confirm every call. The first live run stalled on exactly that: the agent
+  composed a read, sourced four licensed Wikimedia images, then stopped to ask
+  "shall I commit it?". `submit_answer`, `say` and `propose_question` now declare
+  `destructiveHint: false`, and `tools.test.js` asserts that no verb is left to
+  the default. Nothing in this game destroys anything; a commit fills an empty
+  slot and a second one is refused.
+
+- **A backtick inside `manual.js` ends the template literal** and every importer
+  fails at once. Escape them, as `\`yourMove\`` already is.
 
 - **A name is not a tool.** `reregister` used to skip any tool whose NAME was
   already registered, which was correct in v1 where schemas never changed. This

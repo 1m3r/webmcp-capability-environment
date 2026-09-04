@@ -115,3 +115,9 @@ and starts as new applications rather than as more levels of this one.
   from picking a game never reached the agent and Perspective was unplayable.
   Fixed by comparing tool bodies and unregistering withdrawn verbs. The agent
   diagnosed it correctly on the shared screen before any human did.
+- 2026-09-04 · Second live-run finding: the agent stopped to ask permission
+  before every commit. Cause was the page, not the agent — MCP defaults
+  destructiveHint to true, so an unannotated submit_answer reads as destructive
+  and a careful client confirms each call. All three write verbs now declare
+  what they do; a test class asserts none is left to the client default.
+  Cold start remains a platform limit: the page cannot start an agent's turn.

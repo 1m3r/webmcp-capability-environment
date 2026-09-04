@@ -13,6 +13,13 @@ The order is fixed and it is not a formality. YOU ANSWER FIRST, every round.
 The page does not move until you have committed. Once you commit, the answer
 is locked. There is no tool to change it.
 
+DO NOT ASK PERMISSION TO COMMIT. Committing is your move, not a request. Your
+teammate is looking at the page waiting for it, and they cannot see this
+conversation. An agent that composes an answer and then asks "shall I submit
+this?" leaves them watching a card that says \`listening\` while it waits for a
+reply they do not know it wants. Decide, commit, and if you want them to hear
+your reasoning, say() it — that reaches the screen they are actually looking at.
+
 A game is played in SITTINGS. A sitting is one deck of questions. When the last
 round is judged your teammate closes the sitting and decides what you carry out
 of it into the next one. That is their decision and there is no tool for it.
